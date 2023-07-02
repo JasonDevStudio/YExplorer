@@ -12,52 +12,51 @@
     <StackPanel>
         <StackPanel Orientation="Horizontal" Height="30">
             <Label HorizontalAlignment="Left" Content="处理目录："></Label>
-            <TextBox Text="{Binding DirPath,Mode=TwoWay}" MinWidth="500"></TextBox>
-            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}"></Button>
-            <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}"></Button>
-
+            <TextBox Text="{Binding DirPath,Mode=TwoWay}" MinWidth="700" Margin="5"></TextBox>
+            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
+            <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
         </StackPanel>
         <StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto" Height="1000">
-            <ItemsControl ItemsSource="{Binding Videos}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate> 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                <ColumnDefinition Width="Auto"></ColumnDefinition>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="50"></RowDefinition>
-                                <RowDefinition Height="Auto"></RowDefinition>
-                                <RowDefinition Height="50"></RowDefinition>
-                            </Grid.RowDefinitions>
+                <ItemsControl ItemsSource="{Binding Videos}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="50"></RowDefinition>
+                                    <RowDefinition Height="Auto"></RowDefinition>
+                                    <RowDefinition Height="50"></RowDefinition>
+                                </Grid.RowDefinitions>
 
-                            <Label Grid.ColumnSpan="5" Content="{Binding Caption}" Margin="10" FontSize="18" />
-                            <Image Grid.Row="1" Grid.Column="0" Source="{Binding SnapshotPath1}" Width="300" Height="300" ToolTip="{Binding SnapshotPath1}" />
-                            <Image Grid.Row="1" Grid.Column="1" Source="{Binding SnapshotPath2}" Width="300" Height="300" ToolTip="{Binding SnapshotPath2}"/>
-                            <Image Grid.Row="1" Grid.Column="2" Source="{Binding SnapshotPath3}" Width="300" Height="300" ToolTip="{Binding SnapshotPath3}"/>
-                            <Image Grid.Row="1" Grid.Column="3" Source="{Binding SnapshotPath4}" Width="300" Height="300" ToolTip="{Binding SnapshotPath4}"/>
-                            <Image Grid.Row="1" Grid.Column="4" Source="{Binding SnapshotPath5}" Width="300" Height="300" ToolTip="{Binding SnapshotPath5}"/>
-                            <Button Grid.Row="2" Grid.ColumnSpan="3" Content="Play" Height="30" FontSize="18"
+                                <Label Grid.ColumnSpan="5" Content="{Binding Caption}" Margin="10" FontSize="18" />
+                                <Image Grid.Row="1" Grid.Column="0" Source="{Binding SnapshotPath1}" Width="300" Height="300" ToolTip="{Binding SnapshotPath1}" />
+                                <Image Grid.Row="1" Grid.Column="1" Source="{Binding SnapshotPath2}" Width="300" Height="300" ToolTip="{Binding SnapshotPath2}"/>
+                                <Image Grid.Row="1" Grid.Column="2" Source="{Binding SnapshotPath3}" Width="300" Height="300" ToolTip="{Binding SnapshotPath3}"/>
+                                <Image Grid.Row="1" Grid.Column="3" Source="{Binding SnapshotPath4}" Width="300" Height="300" ToolTip="{Binding SnapshotPath4}"/>
+                                <Image Grid.Row="1" Grid.Column="4" Source="{Binding SnapshotPath5}" Width="300" Height="300" ToolTip="{Binding SnapshotPath5}"/>
+                                <Button Grid.Row="2" Grid.ColumnSpan="3" Content="Play" Height="30" FontSize="18"
                                     Command="{Binding Path=DataContext.PlayCommand, 
                                     RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding VideoPath}" Margin="10" />
-                            <Button Grid.Row="2" Grid.Column="3" Content="Folder" Height="30" FontSize="18"
+                                <Button Grid.Row="2" Grid.Column="3" Content="Folder" Height="30" FontSize="18"
                                     Command="{Binding Path=DataContext.FolderCommand, 
                                     RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding VideoPath}" Margin="10" ></Button>
-                            <Button Grid.Row="2" Grid.Column="4" Content="Del" Height="30" FontSize="18"
+                                <Button Grid.Row="2" Grid.Column="4" Content="Del" Height="30" FontSize="18"
                                     Command="{Binding Path=DataContext.DeleteCommand, 
                                     RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" Margin="10" ></Button>
-                        </Grid> 
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </ScrollViewer>
         </StackPanel>
         <StackPanel>
