@@ -5,7 +5,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
@@ -47,10 +50,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public async Task ProcessForDirAsync()
     {
+        this.videoFiles?.Clear();
         var uri = this.DirPath;
         var dirInfo = new DirectoryInfo(uri);
         await this.ProcessForDirsAsync(dirInfo);
-        await this.ProcessVideoAsync();
+        await this.ProcessVideosAsync();
     }
 
     [RelayCommand]
@@ -59,7 +63,14 @@ public partial class MainViewModel : ObservableObject
         this.Videos.Clear();
         var uri = this.DirPath;
         var dirInfo = new DirectoryInfo(uri);
-        await this.LoadDirAsync(dirInfo);
+        Task.Factory.StartNew(() =>
+        {
+            var _videos = this.LoadDirAsync(dirInfo).GetAwaiter().GetResult();
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                this.Videos = new ObservableCollection<VideoEnty>(_videos);
+            });
+        });
     }
 
     [RelayCommand]
@@ -94,55 +105,68 @@ public partial class MainViewModel : ObservableObject
             File.Delete(video.SnapshotPath3);
             File.Delete(video.SnapshotPath4);
             File.Delete(video.SnapshotPath5);
-            
+
             this.Videos.Remove(video);
         }
     }
-    
-    private async Task LoadDirAsync(DirectoryInfo dirInfo)
+
+    private async Task<List<VideoEnty>> LoadDirAsync(DirectoryInfo dirInfo)
     {
         this.Output($"Start Load {dirInfo.Name} ...");
-        var files = dirInfo.GetFiles();
-        var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
-        var chidDirs = dirInfo.GetDirectories();
+        var videoEnties = new List<VideoEnty>();
 
-        if (videoFiles?.Any() ?? false)
+        try
         {
-            foreach (var video in videoFiles)
-            {
-                var name = Path.GetFileNameWithoutExtension(video.Name);
-                var videoEnty = new VideoEnty();
-                var snapshotName1 = $"{name}_1.png";
-                var snapshotPath1 = Path.Combine(dirInfo.FullName, snapshotName1);
-                var snapshotName2 = $"{name}_.png";
-                var snapshotPath2 = Path.Combine(dirInfo.FullName, snapshotName2);
-                var snapshotName3 = $"{name}_3.png";
-                var snapshotPath3 = Path.Combine(dirInfo.FullName, snapshotName3);
-                var snapshotName4 = $"{name}_4.png";
-                var snapshotPath4 = Path.Combine(dirInfo.FullName, snapshotName4);
-                var snapshotName5 = $"{name}_5.png";
-                var snapshotPath5 = Path.Combine(dirInfo.FullName, snapshotName5);
+            var files = dirInfo.GetFiles();
+            var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
+            var chidDirs = dirInfo.GetDirectories();
 
-                videoEnty.Caption = Path.GetFileNameWithoutExtension(video.Name);
-                videoEnty.VideoPath = video.FullName;
-                videoEnty.SnapshotPath1 = snapshotPath1;
-                videoEnty.SnapshotPath2 = snapshotPath2;
-                videoEnty.SnapshotPath3 = snapshotPath3;
-                videoEnty.SnapshotPath4 = snapshotPath4;
-                videoEnty.SnapshotPath5 = snapshotPath5;
-                this.Videos.Add(videoEnty);
+            if (videoFiles?.Any() ?? false)
+            {
+                foreach (var video in videoFiles)
+                {
+                    var name = Path.GetFileNameWithoutExtension(video.Name);
+                    var videoEnty = new VideoEnty();
+                    var snapshotName1 = $"{name}_1.png";
+                    var snapshotPath1 = Path.Combine(dirInfo.FullName, snapshotName1);
+                    var snapshotName2 = $"{name}_.png";
+                    var snapshotPath2 = Path.Combine(dirInfo.FullName, snapshotName2);
+                    var snapshotName3 = $"{name}_3.png";
+                    var snapshotPath3 = Path.Combine(dirInfo.FullName, snapshotName3);
+                    var snapshotName4 = $"{name}_4.png";
+                    var snapshotPath4 = Path.Combine(dirInfo.FullName, snapshotName4);
+                    var snapshotName5 = $"{name}_5.png";
+                    var snapshotPath5 = Path.Combine(dirInfo.FullName, snapshotName5);
+
+                    videoEnty.Caption = Path.GetFileNameWithoutExtension(video.Name);
+                    videoEnty.VideoPath = video.FullName;
+                    videoEnty.SnapshotPath1 = snapshotPath1;
+                    videoEnty.SnapshotPath2 = snapshotPath2;
+                    videoEnty.SnapshotPath3 = snapshotPath3;
+                    videoEnty.SnapshotPath4 = snapshotPath4;
+                    videoEnty.SnapshotPath5 = snapshotPath5;
+                    videoEnties.Add(videoEnty);
+                }
+            }
+
+            if (chidDirs?.Any() ?? false)
+            {
+                foreach (var item in chidDirs)
+                {
+                    var enties = await this.LoadDirAsync(item);
+                    if (enties?.Any() ?? false)
+                        videoEnties.AddRange(enties);
+                }
             }
         }
-
-        if (chidDirs?.Any() ?? false)
+        catch (Exception ex)
         {
-            foreach (var item in chidDirs)
-            {
-                await this.LoadDirAsync(item);
-            }
+            this.Output($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
+            MessageBox.Show($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
         }
 
         this.Output($"End Load {dirInfo.Name} ...");
+        return videoEnties;
     }
 
     private async Task ProcessForDirAsync(DirectoryInfo dirInfo)
@@ -231,6 +255,7 @@ public partial class MainViewModel : ObservableObject
     private async Task ProcessForDirsAsync(DirectoryInfo dirInfo)
     {
         this.Output($"Start Process {this.DirPath} ...");
+
         var files = dirInfo.GetFiles();
         var picFiles = files.Where(f => picExt.Contains(f.Extension.ToLower())).ToList();
         var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
@@ -265,7 +290,9 @@ public partial class MainViewModel : ObservableObject
         if (videoStoreFiles?.Any() ?? false)
         {
             this.Output($"Global video files added .");
-            this.videoFiles.AddRange(videoStoreFiles);
+
+            lock (this.videoFiles)
+                this.videoFiles.AddRange(videoStoreFiles);
         }
 
         var chidDirs = dirInfo.GetDirectories();
@@ -309,7 +336,6 @@ public partial class MainViewModel : ObservableObject
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
         var media = new Media(libVLC, fileInfo.FullName, FromType.FromPath);
-
         // Wait for the media to be parsed
         await media.Parse(MediaParseOptions.ParseNetwork);
 
@@ -334,6 +360,64 @@ public partial class MainViewModel : ObservableObject
 
         // Dispose the media
         media.Dispose();
+    }
+
+    private async Task ProcessVideosAsync()
+    {
+        var taskCount = 8;
+        var batchSize = this.videoFiles.Count / taskCount;
+        var array = this.videoFiles.Chunk(batchSize).ToList();
+        var tasks = new List<Task>(taskCount);
+
+        for (int i = 0; i < array.Count; i++)
+        {
+            tasks.Add(Task.Factory.StartNew(async obj =>
+            {
+                var videos = obj as FileInfo[];
+                await ProcessVideosAsync(videos);
+            }, array[i]));
+        }
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task ProcessVideosAsync(FileInfo[] fileInfos)
+    {
+        using var libVLC = new LibVLC();
+        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
+
+        foreach (var item in fileInfos)
+        {
+            try
+            {
+                var media = new Media(libVLC, item.FullName, FromType.FromPath);
+                mediaPlayer.Media = media;
+                mediaPlayer.Play();
+
+                while (mediaPlayer.State != VLCState.Playing)
+                    Thread.Sleep(1000);
+
+                for (int i = 0; i < 5; i++)
+                {
+                    mediaPlayer.Time = (4 + i) * 60 * 1000;
+                    await Task.Delay(1000);
+                    var noExtName = Path.GetFileNameWithoutExtension(item.Name);
+                    var dirPath = Path.GetDirectoryName(item.FullName);
+                    var snapshotPath = Path.Combine(dirPath, $"{noExtName}_{i + 1}.png");
+
+                    if (File.Exists(snapshotPath))
+                        File.Delete(snapshotPath);
+
+                    mediaPlayer.TakeSnapshot(0, snapshotPath, 0, 0);
+                    await Task.Delay(1000);
+                    this.Output($"Snapshot {snapshotPath} .");
+                }
+            }
+            catch (Exception ex)
+            {
+                this.Output($"Error: {item.FullName}{Environment.NewLine}{ex}");
+            }
+        }
     }
 
     private void Output(string msg)

@@ -5,13 +5,13 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:YExplorer"
         mc:Ignorable="d"
-        Title="MainWindow" Height="1000" Width="Auto">
+        Title="MainWindow" Height="1000" Width="1550">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
     <StackPanel>
-        <StackPanel Orientation="Horizontal" Height="30">
-            <Label HorizontalAlignment="Left" Content="处理目录："></Label>
+        <StackPanel Orientation="Horizontal" Height="40">
+            <Label HorizontalAlignment="Left" VerticalAlignment="Center" Content="目录：" FontSize="15"></Label>
             <TextBox Text="{Binding DirPath,Mode=TwoWay}" MinWidth="700" Margin="5"></TextBox>
             <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
