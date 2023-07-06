@@ -15,6 +15,8 @@
             <TextBox Text="{Binding DirPath,Mode=TwoWay}" MinWidth="700" Margin="5"></TextBox>
             <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
+            <Button Width="50" Content="清理" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
+            <Button Width="50" Content="保存" Command="{Binding SaveCommand}" Margin="5"></Button>
         </StackPanel>
         <StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto" Height="1000">
@@ -35,7 +37,14 @@
                                     <RowDefinition Height="50"></RowDefinition>
                                 </Grid.RowDefinitions>
 
-                                <Label Grid.ColumnSpan="5" Content="{Binding Caption}" Margin="10" FontSize="18" />
+                                <Label Grid.ColumnSpan="3" Content="{Binding Caption}" Margin="10" FontSize="18" />
+                                <StackPanel Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="10" >
+                                    <Label Grid.Column="4" Content="{Binding Length}" FontSize="18" />
+                                    <Label Grid.Column="4" Content="MB  " FontSize="18" />
+                                    <Label Grid.Column="4" Content="{Binding MidifyTime}" FontSize="18" />
+                                    <Label Grid.Column="4" Content="  " FontSize="18" />
+                                    <Label Grid.Column="4" Content="{Binding PlayCount}" FontSize="18" />
+                                </StackPanel>
                                 <Image Grid.Row="1" Grid.Column="0" Source="{Binding SnapshotPath1}" Width="300" Height="300" ToolTip="{Binding SnapshotPath1}" />
                                 <Image Grid.Row="1" Grid.Column="1" Source="{Binding SnapshotPath2}" Width="300" Height="300" ToolTip="{Binding SnapshotPath2}"/>
                                 <Image Grid.Row="1" Grid.Column="2" Source="{Binding SnapshotPath3}" Width="300" Height="300" ToolTip="{Binding SnapshotPath3}"/>
