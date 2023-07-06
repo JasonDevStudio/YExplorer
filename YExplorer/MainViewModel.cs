@@ -34,6 +34,8 @@ public partial class MainViewModel : ObservableObject
     private string log;
     private List<FileInfo> videoFiles = new List<FileInfo>();
     private SynchronizedCollection<VideoEnty> videoCollection = new SynchronizedCollection<VideoEnty>();
+    private Dictionary<string, VideoEnty> dicVideos = new();
+
 
     public string DirPath
     {
@@ -47,6 +49,7 @@ public partial class MainViewModel : ObservableObject
         set => this.SetProperty(ref this.videos, value);
     }
 
+
     public string Log
     {
         get => this.log;
@@ -57,6 +60,7 @@ public partial class MainViewModel : ObservableObject
     public async Task ProcessForDirAsync()
     {
         this.videoFiles?.Clear();
+        this.dicVideos = this.Videos?.ToDictionary(mm => mm.VideoPath);
         var uri = this.DirPath;
         var dirInfo = new DirectoryInfo(uri);
         await this.ProcessForDirsAsync(dirInfo);
@@ -315,6 +319,9 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
+                if (dicVideos?.ContainsKey(item.FullName) ?? false)
+                    continue;
+
                 var media = new Media(libVLC, item.FullName, FromType.FromPath);
                 mediaPlayer.Media = media;
                 mediaPlayer.Play();
