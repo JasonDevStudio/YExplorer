@@ -10,6 +10,7 @@ using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Xml.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -20,6 +21,20 @@ namespace YExplorer;
 
 public partial class MainViewModel : ObservableObject
 {
+    public MainViewModel()
+    {
+        //this.ProcessDirCommand = new AsyncRelayCommand(ProcessForDirAsync);
+        this.DeleteAllCommand = new AsyncRelayCommand(DeleteAllAsync);
+        this.LoadDirCommand = new AsyncRelayCommand(LoadDirAsync);
+        this.SaveCommand = new AsyncRelayCommand(SaveAsync);
+
+        this.paths.Add($@"\\192.168.10.2\99_资源收藏\01_成人资源\17_1024");
+        this.paths.Add($@"\\192.168.10.2\99_资源收藏\01_成人资源\16_1024");
+        this.paths.Add($@"\\192.168.10.2\99_资源收藏\01_成人资源\15_1024");
+    }
+
+    #region Fields
+
     private static List<string> picExt = new List<string> { ".jpg", ".png", ".gif", ".bmp" };
 
     private static List<string> videoExt = new List<string>
@@ -31,11 +46,17 @@ public partial class MainViewModel : ObservableObject
     private decimal videoMaxMbSize = 100 * 1024 * 1024;
     private string dirPath;
     private ObservableCollection<VideoEnty> videos = new ObservableCollection<VideoEnty>();
+    private ObservableCollection<VideoEnty> _tmpVideos = new ObservableCollection<VideoEnty>();
     private string log;
     private List<FileInfo> videoFiles = new List<FileInfo>();
     private SynchronizedCollection<VideoEnty> videoCollection = new SynchronizedCollection<VideoEnty>();
     private Dictionary<string, VideoEnty> dicVideos = new();
+    private ObservableCollection<string> paths = new ObservableCollection<string>();
 
+
+    #endregion
+
+    #region Properties
 
     public string DirPath
     {
@@ -49,12 +70,36 @@ public partial class MainViewModel : ObservableObject
         set => this.SetProperty(ref this.videos, value);
     }
 
+    public ObservableCollection<VideoEnty> TmpVideos
+    {
+        get => this._tmpVideos;
+        set => this.SetProperty(ref this._tmpVideos, value);
+    }
+
+    public ObservableCollection<string> Paths
+    {
+        get => this.paths;
+        set => this.SetProperty(ref this.paths, value);
+    }
 
     public string Log
     {
         get => this.log;
         set => this.SetProperty(ref this.log, value);
     }
+
+    #endregion
+
+    #region Command
+
+    public IAsyncRelayCommand ProcessDirCommand { get; set; }
+    public IAsyncRelayCommand DeleteAllCommand { get; set; }
+    public IAsyncRelayCommand LoadDirCommand { get; set; }
+    public IAsyncRelayCommand SaveCommand { get; set; }
+
+    #endregion
+
+    #region API
 
     [RelayCommand]
     public async Task ProcessForDirAsync()
@@ -68,7 +113,6 @@ public partial class MainViewModel : ObservableObject
         this.Videos = new ObservableCollection<VideoEnty>(this.videoCollection);
     }
 
-    [RelayCommand]
     public async Task DeleteAllAsync()
     {
         var uri = this.DirPath;
@@ -76,36 +120,56 @@ public partial class MainViewModel : ObservableObject
         await Task.Run(() => DeleteAll(dirInfo));
     }
 
-    [RelayCommand]
     public async Task LoadDirAsync()
     {
         this.Videos.Clear();
         var uri = this.DirPath;
         var dirInfo = new DirectoryInfo(uri);
         var _videos = await this.LoadDirAsync(dirInfo);
-        this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
+
+        if (_videos?.Any() ?? false)
+        {
+            this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
+            var _tmpVideos = this.Videos.Take(20);
+            this.TmpVideos = new ObservableCollection<VideoEnty>(_tmpVideos);
+        }
     }
 
-    [RelayCommand]
     public async Task SaveAsync()
     {
-        var uri = this.DirPath;
-        var dirInfo = new DirectoryInfo(uri);
-        await Task.Run(() => this.Save(dirInfo));
+        try
+        {
+            var uri = this.DirPath;
+            var dirInfo = new DirectoryInfo(uri);
+            this.Save(dirInfo);
+
+            MessageBox.Show("Save success!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     [RelayCommand]
     public void Play(object param)
     {
-        string path = param as string;
-        if (!string.IsNullOrWhiteSpace(path))
+        try
         {
-            Process.Start(@"C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe", path);
+            string path = param as string;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                Process.Start(@"C:\Program Files\DAUM\PotPlayer\PotPlayerMini64.exe", path);
 
-            var video = this.Videos.FirstOrDefault(m => m.VideoPath == path);
-            video.PlayCount++;
-            this.SaveAsync();
-
+                var video = this.Videos.FirstOrDefault(m => m.VideoPath == path);
+                video.PlayCount++;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -123,18 +187,58 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void Delete(object param)
     {
-        if (param is VideoEnty video)
+        try
         {
-            File.Delete(video.VideoPath);
-            File.Delete(video.SnapshotPath1);
-            File.Delete(video.SnapshotPath2);
-            File.Delete(video.SnapshotPath3);
-            File.Delete(video.SnapshotPath4);
-            File.Delete(video.SnapshotPath5);
+            if (param is VideoEnty video)
+            {
+                File.Delete(video.VideoPath);
 
-            this.Videos.Remove(video);
+                this.Videos.Remove(video);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    [RelayCommand]
+    public async Task ProcessVideoAsync(object param)
+    {
+        try
+        {
+            if (param is VideoEnty enty)
+            {
+                await this.ProcessVideoAsync(enty);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public void ScrollChanged(dynamic parameter)
+    { 
+        if (parameter.VerticalOffset == parameter.ScrollableHeight)
+        { 
+            var index = this.TmpVideos.Count;
+            var videoss = this.Videos.Skip(index).Take(2).ToList();
+
+            if (videoss?.Any() ?? false)
+            {
+                foreach (var item in videoss)
+                {
+                    this.TmpVideos.Add(item);
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region private
 
     private void DeleteAll(DirectoryInfo dirInfo)
     {
@@ -147,8 +251,8 @@ public partial class MainViewModel : ObservableObject
         var picDelFiles = picFiles.Where(m => m.Length < oneMbSize).ToList();
         var otherDelFiles = files
             .Where(m => !picExt.Contains(m.Extension.ToLower()) &&
-            !videoExt.Contains(m.Extension.ToLower()) &&
-            !storeExt.Contains(m.Extension.ToLower())).ToList();
+                        !videoExt.Contains(m.Extension.ToLower()) &&
+                        !storeExt.Contains(m.Extension.ToLower())).ToList();
 
         if (picDelFiles?.Any() ?? false)
         {
@@ -202,53 +306,19 @@ public partial class MainViewModel : ObservableObject
                 videoEnties = JsonConvert.DeserializeObject<List<VideoEnty>>(json);
                 return videoEnties;
             }
-
-            var files = dirInfo.GetFiles();
-            var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
-            var chidDirs = dirInfo.GetDirectories();
-
-            if (videoFiles?.Any() ?? false)
+            else
             {
-                foreach (var video in videoFiles)
+                if (this.videoCollection?.Any() ?? false)
                 {
-                    var name = Path.GetFileNameWithoutExtension(video.Name);
-                    var videoEnty = new VideoEnty();
-                    var snapshotName1 = $"{name}_1.png";
-                    var snapshotPath1 = Path.Combine(dirInfo.FullName, snapshotName1);
-                    var snapshotName2 = $"{name}_.png";
-                    var snapshotPath2 = Path.Combine(dirInfo.FullName, snapshotName2);
-                    var snapshotName3 = $"{name}_3.png";
-                    var snapshotPath3 = Path.Combine(dirInfo.FullName, snapshotName3);
-                    var snapshotName4 = $"{name}_4.png";
-                    var snapshotPath4 = Path.Combine(dirInfo.FullName, snapshotName4);
-                    var snapshotName5 = $"{name}_5.png";
-                    var snapshotPath5 = Path.Combine(dirInfo.FullName, snapshotName5);
-
-                    videoEnty.Caption = Path.GetFileNameWithoutExtension(video.Name);
-                    videoEnty.VideoPath = video.FullName;
-                    videoEnty.SnapshotPath1 = snapshotPath1;
-                    videoEnty.SnapshotPath2 = snapshotPath2;
-                    videoEnty.SnapshotPath3 = snapshotPath3;
-                    videoEnty.SnapshotPath4 = snapshotPath4;
-                    videoEnty.SnapshotPath5 = snapshotPath5;
-                    videoEnties.Add(videoEnty);
-                }
-            }
-
-            if (chidDirs?.Any() ?? false)
-            {
-                foreach (var item in chidDirs)
-                {
-                    var enties = await this.LoadDirAsync(item);
-                    if (enties?.Any() ?? false)
-                        videoEnties.AddRange(enties);
+                    videoEnties = this.videoCollection.ToList();
                 }
             }
         }
         catch (Exception ex)
         {
             this.Output($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
-            MessageBox.Show($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
+            MessageBox.Show($"{dirInfo.FullName}{Environment.NewLine}{ex}", "Error", MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
 
         this.Output($"End Load {dirInfo.Name} ...");
@@ -311,6 +381,7 @@ public partial class MainViewModel : ObservableObject
 
     private async Task ProcessVideosAsync(string dirName, FileInfo[] fileInfos)
     {
+        var picCount = 10;
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
         var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", dirName);
@@ -322,58 +393,145 @@ public partial class MainViewModel : ObservableObject
                 if (dicVideos?.ContainsKey(item.FullName) ?? false)
                     continue;
 
-                var media = new Media(libVLC, item.FullName, FromType.FromPath);
-                mediaPlayer.Media = media;
+                var times = new List<long>(); // 截图时间点
+                var images = new List<string>(); // 截图文件
+                var length = await this.ParseMediaAsync(libVLC, item);
+                var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+                var interval = length / picCount; // 截图时间间隔
+                mediaPlayer.Media = media; // 设置视频文件
+                mediaPlayer.EncounteredError += (s, e) => { this.Output($"Error: {e}"); };
+
+                for (int i = 0; i < picCount; i++)
+                    times.Add(interval * i); // 添加播放时间  
+
                 mediaPlayer.Play();
+                mediaPlayer.ToggleMute(); // 静音
 
                 while (mediaPlayer.State != VLCState.Playing)
-                    Thread.Sleep(1000);
+                    Thread.Sleep(500);
 
-                var videoEnty = new VideoEnty();
-                videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name);
-                videoEnty.Length = item.Length / 1024 / 1024;
-                videoEnty.VideoPath = item.FullName;
-                videoEnty.MidifyTime = item.LastWriteTime;
+                var videoEnty = new VideoEnty(); // 视频实体
+                videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
+                videoEnty.Length = item.Length / 1024 / 1024; // 视频大小
+                videoEnty.VideoPath = item.FullName; // 视频路径
+                videoEnty.MidifyTime = item.LastWriteTime; // 修改时间
+                videoEnty.VideoDir = jsonpath;
 
-                for (int i = 0; i < 5; i++)
+                foreach (var time in times)
                 {
-                    mediaPlayer.Time = (4 + i) * 60 * 1000;
-                    await Task.Delay(1000);
+                    await Task.Delay(500); // 等待截图完成
+
                     var picName = $"{Guid.NewGuid()}.png";
-                    var snapshotPath = Path.Combine(jsonpath, picName);
+                    var snapshot = Path.Combine(jsonpath, picName);
+                    images.Add(snapshot);
 
-                    if (i == 0)
-                        videoEnty.SnapshotPath1 = snapshotPath;
-
-                    if (i == 1)
-                        videoEnty.SnapshotPath2 = snapshotPath;
-
-                    if (i == 2)
-                        videoEnty.SnapshotPath3 = snapshotPath;
-
-                    if (i == 3)
-                        videoEnty.SnapshotPath4 = snapshotPath;
-
-                    if (i == 4)
-                        videoEnty.SnapshotPath5 = snapshotPath;
-
-                    if (File.Exists(snapshotPath))
-                        File.Delete(snapshotPath);
-
-                    mediaPlayer.TakeSnapshot(0, snapshotPath, 0, 0);
-                    await Task.Delay(1000);
-                    this.Output($"Snapshot {snapshotPath} .");
+                    mediaPlayer.Time = time; // 设置播放时间
+                    await Task.Delay(500); // 等待截图完成
+                    mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
                 }
 
+                videoEnty.Snapshots = new ObservableCollection<string>(images);
                 this.videoCollection.Add(videoEnty);
             }
             catch (Exception ex)
             {
                 this.Output($"Error: {item.FullName}{Environment.NewLine}{ex}");
             }
+            finally
+            {
+                mediaPlayer.Stop();
+            }
         }
 
         mediaPlayer.Dispose();
+    }
+
+    private async Task ProcessVideoAsync(VideoEnty enty)
+    {
+        var picCount = 10;
+        using var libVLC = new LibVLC();
+        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
+
+        try
+        {
+            var item = new FileInfo(enty.VideoPath); // 视频文件
+            var times = new List<long>(); // 截图时间点
+            var images = new List<string>(); // 截图文件
+            var length = await this.ParseMediaAsync(libVLC, item);
+            var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+            var interval = length / picCount; // 截图时间间隔
+            var jsonpath = enty.VideoDir;
+            mediaPlayer.Media = media; // 设置视频文件
+            mediaPlayer.EncounteredError += (s, e) => { this.Output($"Error: {e}"); };
+
+            for (int i = 0; i < picCount; i++)
+                times.Add(interval * i); // 添加播放时间  
+
+            mediaPlayer.Play();
+            mediaPlayer.ToggleMute(); // 静音
+
+            while (mediaPlayer.State != VLCState.Playing)
+                Thread.Sleep(500);
+
+            enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
+            enty.Length = enty.Length / 1024 / 1024; // 视频大小
+            enty.VideoPath = item.FullName; // 视频路径
+            enty.MidifyTime = item.LastWriteTime; // 修改时间
+
+            foreach (var time in times)
+            {
+                await Task.Delay(200); // 等待截图完成
+
+                var picName = $"{Guid.NewGuid()}.png";
+                var snapshot = Path.Combine(jsonpath, picName);
+                images.Add(snapshot);
+
+                mediaPlayer.Time = time; // 设置播放时间
+                await Task.Delay(100); // 等待截图完成
+                mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
+            }
+
+            this.DeleteVideoImages(enty);
+            enty.Snapshots = new ObservableCollection<string>(images);
+        }
+        catch (Exception ex)
+        {
+            this.Output($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
+        }
+        finally
+        {
+            mediaPlayer.Stop();
+            mediaPlayer.Dispose();
+        }
+    }
+
+    private void DeleteVideoImages(VideoEnty enty)
+    {
+        var imgs = enty.Snapshots.ToList();
+        enty.Snapshots.Clear();
+        foreach (var item in imgs)
+        {
+            try
+            {
+                File.Delete(item);
+            }
+            catch (Exception ex)
+            {
+                this.Output($"File Del Error:{item}{Environment.NewLine}{ex}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// 解析视频时长
+    /// </summary> 
+    private async Task<long> ParseMediaAsync(LibVLC libVLC, FileInfo item)
+    {
+        var media = new Media(libVLC, item.FullName, FromType.FromPath);
+        await media.Parse(MediaParseOptions.ParseNetwork);
+        media.ParseStop();
+        var length = media.Duration;
+        return length;
     }
 
     private void Save(DirectoryInfo dirInfo)
@@ -383,38 +541,13 @@ public partial class MainViewModel : ObservableObject
         if (!Directory.Exists(jsonpath))
             Directory.CreateDirectory(jsonpath);
 
-        //foreach (var item in this.Videos)
-        //{
-        //    var pic1 = Path.Combine(jsonpath, $"{Guid.NewGuid()}.png");
-        //    var pic2 = Path.Combine(jsonpath, $"{Guid.NewGuid()}.png");
-        //    var pic3 = Path.Combine(jsonpath, $"{Guid.NewGuid()}.png");
-        //    var pic4 = Path.Combine(jsonpath, $"{Guid.NewGuid()}.png");
-        //    var pic5 = Path.Combine(jsonpath, $"{Guid.NewGuid()}.png");
+        var json = string.Empty;
 
-        //    if (File.Exists(item.SnapshotPath1))
-        //        File.Copy(item.SnapshotPath1, pic1, true);
+        if (this.Videos?.Any() ?? false)
+            json = JsonConvert.SerializeObject(this.Videos, Formatting.Indented);
+        else if (this.videoCollection?.Any() ?? false)
+            json = JsonConvert.SerializeObject(this.videoCollection, Formatting.Indented);
 
-        //    if (File.Exists(item.SnapshotPath2))
-        //        File.Copy(item.SnapshotPath2, pic2, true);
-
-        //    if (File.Exists(item.SnapshotPath3))
-        //        File.Copy(item.SnapshotPath3, pic3, true);
-
-        //    if (File.Exists(item.SnapshotPath4))
-        //        File.Copy(item.SnapshotPath4, pic4, true);
-
-        //    if (File.Exists(item.SnapshotPath5))
-        //        File.Copy(item.SnapshotPath5, pic5, true);
-
-        //    item.SnapshotPath1 = pic1;
-        //    item.SnapshotPath2 = pic2;
-        //    item.SnapshotPath3 = pic3;
-        //    item.SnapshotPath4 = pic4;
-        //    item.SnapshotPath5 = pic5;
-        //}
-
-
-        var json = JsonConvert.SerializeObject(this.videoCollection, Formatting.Indented);
         var jsonfile = Path.Combine(jsonpath, $"{dirInfo.Name}.json");
 
         if (!Directory.Exists(jsonpath))
@@ -430,6 +563,8 @@ public partial class MainViewModel : ObservableObject
     {
         this.Log += $"{Environment.NewLine}[{DateTime.Now:HH:mm:ss fff}] {msg} ";
     }
+
+    #endregion
 }
 
 public class VideoEnty : ObservableObject
@@ -439,11 +574,8 @@ public class VideoEnty : ObservableObject
     private long length;
     private long playCount = 0;
     public DateTime? midifyTime;
-    private string snapshotPath1;
-    private string snapshotPath2;
-    private string snapshotPath3;
-    private string snapshotPath4;
-    private string snapshotPath5;
+    private ObservableCollection<string> snapshots;
+    private string videoDir;
 
     public long Length
     {
@@ -455,6 +587,12 @@ public class VideoEnty : ObservableObject
     {
         get => this._caption;
         set => this.SetProperty(ref this._caption, value);
+    }
+
+    public string VideoDir
+    {
+        get => this.videoDir;
+        set => this.SetProperty(ref this.videoDir, value);
     }
 
     public string VideoPath
@@ -469,35 +607,15 @@ public class VideoEnty : ObservableObject
         set => this.SetProperty(ref this.playCount, value);
     }
 
-    public DateTime? MidifyTime { get => this.midifyTime; set => this.SetProperty(ref this.midifyTime, value); }
-
-    public string SnapshotPath1
+    public DateTime? MidifyTime
     {
-        get => this.snapshotPath1;
-        set => this.SetProperty(ref this.snapshotPath1, value);
+        get => this.midifyTime;
+        set => this.SetProperty(ref this.midifyTime, value);
     }
 
-    public string SnapshotPath2
+    public ObservableCollection<string> Snapshots
     {
-        get => this.snapshotPath2;
-        set => this.SetProperty(ref this.snapshotPath2, value);
-    }
-
-    public string SnapshotPath3
-    {
-        get => this.snapshotPath3;
-        set => this.SetProperty(ref this.snapshotPath3, value);
-    }
-
-    public string SnapshotPath4
-    {
-        get => this.snapshotPath4;
-        set => this.SetProperty(ref this.snapshotPath4, value);
-    }
-
-    public string SnapshotPath5
-    {
-        get => this.snapshotPath5;
-        set => this.SetProperty(ref this.snapshotPath5, value);
+        get => this.snapshots;
+        set => this.SetProperty(ref this.snapshots, value);
     }
 }
