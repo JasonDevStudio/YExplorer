@@ -36,6 +36,10 @@
             <Setter Property="FontSize" Value="15"></Setter>
             <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
         </Style>
+        <Style TargetType="ComboBox" x:Key="MyComboBox">
+            <Setter Property="FontSize" Value="15"></Setter>
+            <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
+        </Style>
         <Style TargetType="ListBox"> 
             <Setter Property="Background" Value="#363636"/>
             <Setter Property="Background" Value="#363636"></Setter>
@@ -46,7 +50,11 @@
     <StackPanel>
         <StackPanel Orientation="Horizontal" Height="40" >
             <Label HorizontalAlignment="Left" VerticalAlignment="Center" Content="目录："></Label>
-            <TextBox Text="{Binding DirPath,Mode=TwoWay}" MinWidth="700" Margin="5"></TextBox>
+            <ComboBox Style="{StaticResource MyComboBox}"
+                      Text="{Binding DirPath,Mode=TwoWay}" 
+                      ItemsSource="{Binding Paths}" 
+                      IsEditable="True"
+                      MinWidth="700" Margin="5"></ComboBox>
             <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="清理" Command="{Binding DeleteAllCommand}" Margin="5"></Button>

@@ -28,9 +28,9 @@ public partial class MainViewModel : ObservableObject
         this.LoadDirCommand = new AsyncRelayCommand(LoadDirAsync);
         this.SaveCommand = new AsyncRelayCommand(SaveAsync);
 
-        this.paths.Add($@"\\192.168.10.2\99_资源收藏\01_成人资源\17_1024");
-        this.paths.Add($@"\\192.168.10.2\99_资源收藏\01_成人资源\16_1024");
-        this.paths.Add($@"\\192.168.10.2\99_资源收藏\01_成人资源\15_1024");
+        var dirs = Directory.GetDirectories(@"\\192.168.10.2\99_资源收藏\01_成人资源");
+        var dirs1 = Directory.GetDirectories(@"\\192.168.10.2\98_资源收藏\01_成人资源");
+        this.paths = new ObservableCollection<string>(dirs.Concat(dirs1)); 
     }
 
     #region Fields
@@ -123,6 +123,8 @@ public partial class MainViewModel : ObservableObject
     public async Task LoadDirAsync()
     {
         this.Videos.Clear();
+        this.TmpVideos.Clear();
+        this.videoCollection.Clear(); 
         var uri = this.DirPath;
         var dirInfo = new DirectoryInfo(uri);
         var _videos = await this.LoadDirAsync(dirInfo);
