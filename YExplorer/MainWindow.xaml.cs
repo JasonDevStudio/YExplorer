@@ -29,6 +29,7 @@ namespace YExplorer
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        
         {
             if (this.DataContext is MainViewModel mvm)
             {

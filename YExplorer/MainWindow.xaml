@@ -55,11 +55,12 @@
                       ItemsSource="{Binding Paths}" 
                       IsEditable="True"
                       MinWidth="700" Margin="5"></ComboBox>
-            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
-            <Button Width="50" Content="清理" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
+            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>            
+            <Button Width="50" Content="清原" ToolTip="清理原始目录" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
             <Button Width="50" Content="保存" Command="{Binding SaveCommand}" Margin="5"></Button>
             <Button Width="50" Content="日志" Command="{Binding OpenLogsCommand}" Margin="5"></Button>
+            <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearDataDirCommand}" Margin="5"></Button>
         </StackPanel>
         <StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto" 

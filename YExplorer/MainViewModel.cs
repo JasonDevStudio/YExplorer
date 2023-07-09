@@ -107,25 +107,19 @@ public partial class MainViewModel : ObservableObject
             var uri = this.DirPath;
             var dirInfo = new DirectoryInfo(uri);
             this.dicVideos = new ConcurrentDictionary<string, VideoEnty>(tmpDics);
-            this.videoCollection = new SynchronizedCollection<VideoEnty>(this.Videos);
+            this.VideosToSynchronizedCollection();
             await this.ProcessForDirsAsync(dirInfo);
 
             Log.Information($"Scan videos count {this.videoFiles.Count}");
 
-            for (int i = 0; i < this.videoFiles.Count; i++)
-            {
-                var vfile = this.videoFiles[i];
-                if (this.dicVideos.ContainsKey(vfile.FullName))
-                {
-                    Log.Information($"{vfile.Name} Video already exists, processed.");
-                    this.videoFiles.Remove(vfile);
-                }
-            }
+            this.ClearExists();
 
             Log.Information($"Filterd videos count {this.videoFiles.Count}");
 
             await this.ProcessVideosAsync();
             this.Videos = new ObservableCollection<VideoEnty>(this.videoCollection);
+
+            Log.Information($"Process videos End。");
         }
         catch (Exception ex)
         {
@@ -182,7 +176,7 @@ public partial class MainViewModel : ObservableObject
             var dirInfo = new DirectoryInfo(uri);
             this.Save(dirInfo);
 
-            MessageBox.Show("Save success!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            //MessageBox.Show("Save success!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
 
             await Task.CompletedTask;
         }
@@ -240,9 +234,12 @@ public partial class MainViewModel : ObservableObject
         {
             if (param is VideoEnty video)
             {
-                File.Delete(video.VideoPath);
+                if (File.Exists(video.VideoPath))
+                    File.Delete(video.VideoPath);
 
                 this.Videos.Remove(video);
+                this.TmpVideos.Remove(video);
+                this.SaveAsync();
             }
         }
         catch (Exception ex)
@@ -304,6 +301,66 @@ public partial class MainViewModel : ObservableObject
         {
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
             Process.Start("explorer.exe", path);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public void ClearDataDir()
+    {
+        try
+        {
+            var delCount = 0;
+            var dirInfo = new DirectoryInfo(this.dirPath);
+            var dataConf = this.GetDataDirPath();
+            var dataDirPath = dataConf.dir;
+            var dicFiles = new Dictionary<string, VideoEnty>();
+            var dataDir = new DirectoryInfo(dataDirPath);
+
+            if (this.Videos?.Any() ?? false)
+            {
+                foreach (var item in this.Videos)
+                {
+                    foreach (var path in item.Snapshots)
+                    {
+                        dicFiles.Add(path, item);
+                    }
+                }
+            }
+
+            if (dataDir.Exists)
+            {
+                var files = dataDir.GetFiles("*.png");
+                var length = files.Length;
+
+                if (files?.Any() ?? false)
+                {
+                    for (int i = length - 1; i >= 0; i--)
+                    {
+                        var file = files[i];
+
+                        if (!dicFiles.ContainsKey(file.FullName))
+                        {
+                            try
+                            {
+                                file.Delete();
+                                delCount++;
+                            }
+                            catch (Exception)
+                            {
+                                Log.Warning($"Del Error : {file.FullName}");
+                            }
+                        }
+                    }
+                }
+
+            }
+
+            MessageBox.Show($"清理数据资源完成, 清理文件 {delCount} 个。", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -374,8 +431,9 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", dirInfo.Name);
-            var jsonfile = Path.Combine(jsonpath, $"{dirInfo.Name}.json");
+            var dataConf = this.GetDataDirPath();
+            var dataDirPath = dataConf.dir;
+            var jsonfile = dataConf.file;
             if (File.Exists(jsonfile))
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
@@ -406,14 +464,14 @@ public partial class MainViewModel : ObservableObject
 
     private async Task ProcessForDirsAsync(DirectoryInfo dirInfo)
     {
-        Log.Information($"Start Process {dirInfo.Name} ...");
+        Log.Debug($"Start Process {dirInfo.Name} ...");
 
         var files = dirInfo.GetFiles();
         var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
         var videoStoreFiles = videoFiles.Where(m => m.Length >= videoMaxMbSize).ToList();
         if (videoStoreFiles?.Any() ?? false)
         {
-            Log.Information($"Global video files added .");
+            Log.Debug($"Global video files added .");
 
             lock (this.videoFiles)
                 this.videoFiles.AddRange(videoStoreFiles);
@@ -428,7 +486,7 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        Log.Information($"End Process {dirInfo.Name} .");
+        Log.Debug($"End Process {dirInfo.Name} .");
     }
 
     private async Task ProcessVideosAsync(string dirName)
@@ -440,10 +498,12 @@ public partial class MainViewModel : ObservableObject
         batchSize = batchSize <= 0 ? 1 : batchSize;
 
         var array = this.videoFiles.Chunk(batchSize).ToList();
-        var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", dirName);
+        var dataConf = this.GetDataDirPath();
+        var dataDirPath = dataConf.dir;
+        var jsonfile = dataConf.file;
         var tasks = new List<Task>(taskCount);
 
-        Directory.CreateDirectory(jsonpath);
+        Directory.CreateDirectory(dataDirPath);
 
         for (int i = 0; i < array.Count; i++)
         {
@@ -466,7 +526,7 @@ public partial class MainViewModel : ObservableObject
         var picCount = 10;
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
-        var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", dirName);
+        var (datapath, jsonfile, name) = this.GetDataDirPath();
 
         foreach (var item in fileInfos)
         {
@@ -501,14 +561,14 @@ public partial class MainViewModel : ObservableObject
                 videoEnty.Length = item.Length / 1024 / 1024; // 视频大小
                 videoEnty.VideoPath = item.FullName; // 视频路径
                 videoEnty.MidifyTime = item.LastWriteTime; // 修改时间
-                videoEnty.VideoDir = jsonpath;
+                videoEnty.VideoDir = datapath;
 
                 foreach (var time in times)
                 {
                     await Task.Delay(500); // 等待截图完成
 
                     var picName = $"{Guid.NewGuid()}.png";
-                    var snapshot = Path.Combine(jsonpath, picName);
+                    var snapshot = Path.Combine(datapath, picName);
                     images.Add(snapshot);
 
                     mediaPlayer.Time = time; // 设置播放时间
@@ -521,7 +581,7 @@ public partial class MainViewModel : ObservableObject
 
                 this.dicVideos[videoEnty.VideoPath] = videoEnty;
                 var json = JsonConvert.SerializeObject((this.Videos?.Any() ?? false) ? this.Videos : this.videoCollection);
-                File.WriteAllTextAsync(Path.Combine(jsonpath, $"{dirName}.json"), json);
+                File.WriteAllTextAsync(jsonfile, json);
             }
             catch (Exception ex)
             {
@@ -542,32 +602,39 @@ public partial class MainViewModel : ObservableObject
         Log.Information($"Start Process Videos , Video count :{this.videoFiles.Count}.");
 
         var picCount = 10;
+        var dirInfo = new DirectoryInfo(this.dirPath);
         using LibVLC? libVLC = new LibVLC();
-        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
-        var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", this.dirPath);
-        var jsonfile = $"{Path.GetDirectoryName(this.dirPath)}.json";
+        using var mediaPlayer = new MediaPlayer(libVLC); // 播放器
+
+        var (datapath, jsonfile, name) = this.GetDataDirPath();
+
+        if (!Directory.Exists(datapath))
+            Directory.CreateDirectory(datapath);
 
         foreach (var item in this.videoFiles)
         {
+            if (dicVideos?.ContainsKey(item.FullName) ?? false)
+            {
+                Log.Debug($"{item.Name} Video already exists, processed.");
+                continue;
+            }
+
             try
             {
-                if (dicVideos?.ContainsKey(item.FullName) ?? false)
-                {
-                    Log.Information($"{item.Name} Video already exists, processed.");
-                    continue;
-                }
-
-                Log.Information($"Process Video {item.Name}.");
+                Log.Debug($"Process Video {item.Name}.");
                 var times = new List<long>(); // 截图时间点
                 var images = new List<string>(); // 截图文件
                 var length = await this.ParseMediaAsync(libVLC, item);
                 var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
                 var interval = length / picCount; // 截图时间间隔
                 mediaPlayer.Media = media; // 设置视频文件
-                mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
+                mediaPlayer.EncounteredError += (s, e) => { Log.Error($"Error: {e}"); };
 
                 for (int i = 0; i < picCount; i++)
                     times.Add(interval * i); // 添加播放时间  
+
+                times.RemoveAt(0); // 移除第一个时间点
+                times.RemoveAt(times.Count - 1); // 移除最后一个时间点
 
                 mediaPlayer.Play();
                 mediaPlayer.ToggleMute(); // 静音
@@ -580,12 +647,12 @@ public partial class MainViewModel : ObservableObject
                 videoEnty.Length = item.Length / 1024 / 1024; // 视频大小
                 videoEnty.VideoPath = item.FullName; // 视频路径
                 videoEnty.MidifyTime = item.LastWriteTime; // 修改时间
-                videoEnty.VideoDir = jsonpath;
+                videoEnty.VideoDir = datapath;
 
                 foreach (var time in times)
                 {
                     var picName = $"{Guid.NewGuid()}.png";
-                    var snapshot = Path.Combine(jsonpath, picName);
+                    var snapshot = Path.Combine(datapath, picName);
                     images.Add(snapshot);
 
                     mediaPlayer.Time = time; // 设置播放时间
@@ -598,21 +665,27 @@ public partial class MainViewModel : ObservableObject
                 this.videoCollection.Add(videoEnty);
 
                 this.dicVideos[videoEnty.VideoPath] = videoEnty;
-                var json = JsonConvert.SerializeObject((this.Videos?.Any() ?? false) ? this.Videos : this.videoCollection);
-                File.WriteAllTextAsync(Path.Combine(jsonpath, jsonfile), json);
+                var json = JsonConvert.SerializeObject(this.videoCollection);
+                await File.WriteAllTextAsync(jsonfile, json);
             }
             catch (Exception ex)
             {
-                Log.Information($"Error: {item.FullName}{Environment.NewLine}{ex}");
+                Log.Error($"Error: {item.FullName}{Environment.NewLine}{ex}");
             }
             finally
             {
-                mediaPlayer.Stop();
+                mediaPlayer?.Stop();
+                await Task.Delay(100);
             }
         }
 
-        mediaPlayer.Dispose();
+        mediaPlayer?.Dispose();
         Log.Information($"End Process Videos , Video count :{this.videoFiles.Count}.");
+    }
+
+    private void LibVLC_Log(object? sender, LogEventArgs e)
+    {
+        Log.Information($"LibVLC : {e.Message}");
     }
 
     private async Task ProcessVideoAsync(VideoEnty enty)
@@ -629,12 +702,15 @@ public partial class MainViewModel : ObservableObject
             var length = await this.ParseMediaAsync(libVLC, item);
             var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
             var interval = length / picCount; // 截图时间间隔
-            var jsonpath = enty.VideoDir;
+            var (datapath, jsonfile, name) = this.GetDataDirPath();
             mediaPlayer.Media = media; // 设置视频文件
-            mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
+            mediaPlayer.EncounteredError += (s, e) => { Log.Error($"Error: {e}"); };
 
             for (int i = 0; i < picCount; i++)
                 times.Add(interval * i); // 添加播放时间  
+
+            times.RemoveAt(0); // 移除第一个时间点
+            times.RemoveAt(times.Count - 1); // 移除最后一个时间点
 
             mediaPlayer.Play();
             mediaPlayer.ToggleMute(); // 静音
@@ -643,29 +719,36 @@ public partial class MainViewModel : ObservableObject
                 Thread.Sleep(500);
 
             enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
-            enty.Length = enty.Length / 1024 / 1024; // 视频大小
+            enty.Length = item.Length / 1024 / 1024; // 视频大小
             enty.VideoPath = item.FullName; // 视频路径
             enty.MidifyTime = item.LastWriteTime; // 修改时间
+            enty.VideoDir = datapath;
 
             foreach (var time in times)
             {
-                await Task.Delay(200); // 等待截图完成
-
                 var picName = $"{Guid.NewGuid()}.png";
-                var snapshot = Path.Combine(jsonpath, picName);
+                var snapshot = Path.Combine(datapath, picName);
                 images.Add(snapshot);
 
                 mediaPlayer.Time = time; // 设置播放时间
                 await Task.Delay(100); // 等待截图完成
                 mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
+                await Task.Delay(100); // 等待截图完成
             }
 
             this.DeleteVideoImages(enty);
-            enty.Snapshots = new ObservableCollection<string>(images);
+            enty.Snapshots?.Clear();
+
+            foreach (var img in images)
+            {
+                enty.Snapshots.Add(img);
+            }
+
+            await this.SaveAsync();
         }
         catch (Exception ex)
         {
-            Log.Information($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
+            Log.Error($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
         }
         finally
         {
@@ -686,7 +769,7 @@ public partial class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                Log.Information($"File Del Error:{item}{Environment.NewLine}{ex}");
+                Log.Error($"File Del Error:{item}{Environment.NewLine}{ex}");
             }
         }
     }
@@ -705,10 +788,7 @@ public partial class MainViewModel : ObservableObject
 
     private void Save(DirectoryInfo dirInfo)
     {
-        var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", dirInfo.Name);
-
-        if (!Directory.Exists(jsonpath))
-            Directory.CreateDirectory(jsonpath);
+        var (datapath, jsonfile, name) = this.GetDataDirPath();
 
         var json = string.Empty;
 
@@ -717,15 +797,49 @@ public partial class MainViewModel : ObservableObject
         else if (this.videoCollection?.Any() ?? false)
             json = JsonConvert.SerializeObject(this.videoCollection, Formatting.Indented);
 
-        var jsonfile = Path.Combine(jsonpath, $"{dirInfo.Name}.json");
-
-        if (!Directory.Exists(jsonpath))
-            Directory.CreateDirectory(jsonpath);
+        if (!Directory.Exists(datapath))
+            Directory.CreateDirectory(datapath);
 
         if (File.Exists(jsonfile))
             File.Delete(jsonfile);
 
         File.WriteAllText(jsonfile, json);
+    }
+
+    private void VideosToSynchronizedCollection()
+    {
+        if (this.Videos?.Any() ?? false)
+        {
+            foreach (var item in this.Videos)
+            {
+                this.videoCollection?.Add(item);
+            }
+        }
+    }
+
+    private void ClearExists()
+    {
+        var count = this.videoFiles.Count;
+
+        for (int i = count - 1; i >= 0; i--)
+        {
+            var vfile = this.videoFiles[i];
+            if (this.dicVideos.ContainsKey(vfile.FullName))
+            {
+                Log.Debug($"{vfile.Name} Video already exists, processed.");
+                this.videoFiles.Remove(vfile);
+            }
+        }
+    }
+
+    private (string dir, string file, string name) GetDataDirPath()
+    {
+        var dirInfo = new DirectoryInfo(this.DirPath);
+        var currDirInfo = new DirectoryInfo(AppContext.BaseDirectory);
+        var dataDirPath = Path.Combine(currDirInfo.Parent.FullName, "data", dirInfo.Name);
+        var name = $"data.json";
+        var jsonfile = Path.Combine(dataDirPath, name);
+        return (dataDirPath, jsonfile, name);
     }
 
     #endregion
