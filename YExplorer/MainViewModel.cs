@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -16,6 +17,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LibVLCSharp.Shared;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace YExplorer;
 
@@ -30,7 +32,7 @@ public partial class MainViewModel : ObservableObject
 
         var dirs = Directory.GetDirectories(@"\\192.168.10.2\99_资源收藏\01_成人资源");
         var dirs1 = Directory.GetDirectories(@"\\192.168.10.2\98_资源收藏\01_成人资源");
-        this.paths = new ObservableCollection<string>(dirs.Concat(dirs1)); 
+        this.paths = new ObservableCollection<string>(dirs.Concat(dirs1));
     }
 
     #region Fields
@@ -45,12 +47,12 @@ public partial class MainViewModel : ObservableObject
     private decimal oneMbSize = 2 * 1024 * 1024;
     private decimal videoMaxMbSize = 100 * 1024 * 1024;
     private string dirPath;
-    private ObservableCollection<VideoEnty> videos = new ObservableCollection<VideoEnty>();
-    private ObservableCollection<VideoEnty> _tmpVideos = new ObservableCollection<VideoEnty>();
     private string log;
-    private List<FileInfo> videoFiles = new List<FileInfo>();
-    private SynchronizedCollection<VideoEnty> videoCollection = new SynchronizedCollection<VideoEnty>();
-    private Dictionary<string, VideoEnty> dicVideos = new();
+    private List<FileInfo> videoFiles = new();
+    private ObservableCollection<VideoEnty> videos = new();
+    private ObservableCollection<VideoEnty> _tmpVideos = new();
+    private SynchronizedCollection<VideoEnty> videoCollection = new();
+    private ConcurrentDictionary<string, VideoEnty> dicVideos = new();
     private ObservableCollection<string> paths = new ObservableCollection<string>();
 
 
@@ -82,12 +84,6 @@ public partial class MainViewModel : ObservableObject
         set => this.SetProperty(ref this.paths, value);
     }
 
-    public string Log
-    {
-        get => this.log;
-        set => this.SetProperty(ref this.log, value);
-    }
-
     #endregion
 
     #region Command
@@ -104,36 +100,77 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public async Task ProcessForDirAsync()
     {
-        this.videoFiles?.Clear();
-        this.dicVideos = this.Videos?.ToDictionary(mm => mm.VideoPath);
-        var uri = this.DirPath;
-        var dirInfo = new DirectoryInfo(uri);
-        await this.ProcessForDirsAsync(dirInfo);
-        await this.ProcessVideosAsync(dirInfo.Name);
-        this.Videos = new ObservableCollection<VideoEnty>(this.videoCollection);
+        try
+        {
+            this.videoFiles?.Clear();
+            var tmpDics = this.Videos?.ToDictionary(mm => mm.VideoPath) ?? new();
+            var uri = this.DirPath;
+            var dirInfo = new DirectoryInfo(uri);
+            this.dicVideos = new ConcurrentDictionary<string, VideoEnty>(tmpDics);
+            this.videoCollection = new SynchronizedCollection<VideoEnty>(this.Videos);
+            await this.ProcessForDirsAsync(dirInfo);
+
+            Log.Information($"Scan videos count {this.videoFiles.Count}");
+
+            for (int i = 0; i < this.videoFiles.Count; i++)
+            {
+                var vfile = this.videoFiles[i];
+                if (this.dicVideos.ContainsKey(vfile.FullName))
+                {
+                    Log.Information($"{vfile.Name} Video already exists, processed.");
+                    this.videoFiles.Remove(vfile);
+                }
+            }
+
+            Log.Information($"Filterd videos count {this.videoFiles.Count}");
+
+            await this.ProcessVideosAsync();
+            this.Videos = new ObservableCollection<VideoEnty>(this.videoCollection);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     public async Task DeleteAllAsync()
     {
-        var uri = this.DirPath;
-        var dirInfo = new DirectoryInfo(uri);
-        await Task.Run(() => DeleteAll(dirInfo));
+        try
+        {
+            var uri = this.DirPath;
+            var dirInfo = new DirectoryInfo(uri);
+            await Task.Run(() => DeleteAll(dirInfo));
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     public async Task LoadDirAsync()
     {
-        this.Videos.Clear();
-        this.TmpVideos.Clear();
-        this.videoCollection.Clear(); 
-        var uri = this.DirPath;
-        var dirInfo = new DirectoryInfo(uri);
-        var _videos = await this.LoadDirAsync(dirInfo);
-
-        if (_videos?.Any() ?? false)
+        try
         {
-            this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
-            var _tmpVideos = this.Videos.Take(20);
-            this.TmpVideos = new ObservableCollection<VideoEnty>(_tmpVideos);
+            this.Videos.Clear();
+            this.TmpVideos.Clear();
+            this.videoCollection.Clear();
+            var uri = this.DirPath;
+            var dirInfo = new DirectoryInfo(uri);
+            var _videos = await this.LoadDirAsync(dirInfo);
+
+            if (_videos?.Any() ?? false)
+            {
+                this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
+                var _tmpVideos = this.Videos.Take(20);
+                this.TmpVideos = new ObservableCollection<VideoEnty>(_tmpVideos);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -151,6 +188,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -171,6 +209,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -178,11 +217,19 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void Folder(object param)
     {
-        string path = param as string;
-        var dirPath = Path.GetDirectoryName(path);
-        if (!string.IsNullOrWhiteSpace(path))
+        try
         {
-            Process.Start("explorer.exe", dirPath);
+            string path = param as string;
+            var dirPath = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                Process.Start("explorer.exe", dirPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -200,6 +247,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
@@ -216,25 +264,51 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     [RelayCommand]
     public void ScrollChanged(dynamic parameter)
-    { 
-        if (parameter.VerticalOffset == parameter.ScrollableHeight)
-        { 
-            var index = this.TmpVideos.Count;
-            var videoss = this.Videos.Skip(index).Take(2).ToList();
-
-            if (videoss?.Any() ?? false)
+    {
+        try
+        {
+            if (parameter.VerticalOffset == parameter.ScrollableHeight)
             {
-                foreach (var item in videoss)
+                var index = this.TmpVideos.Count;
+                var videoss = this.Videos.Skip(index).Take(2).ToList();
+
+                if (videoss?.Any() ?? false)
                 {
-                    this.TmpVideos.Add(item);
+                    foreach (var item in videoss)
+                    {
+                        this.TmpVideos.Add(item);
+                    }
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+
+
+    }
+
+    [RelayCommand]
+    public void OpenLogs()
+    {
+        try
+        {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+            Process.Start("explorer.exe", path);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -244,7 +318,7 @@ public partial class MainViewModel : ObservableObject
 
     private void DeleteAll(DirectoryInfo dirInfo)
     {
-        this.Output($"Start del {this.DirPath} ...");
+        Log.Information($"Start del {this.DirPath} ...");
         var files = dirInfo.GetFiles();
         var picFiles = files.Where(f => picExt.Contains(f.Extension.ToLower())).ToList();
         var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
@@ -258,21 +332,21 @@ public partial class MainViewModel : ObservableObject
 
         if (picDelFiles?.Any() ?? false)
         {
-            this.Output($"Del {dirInfo.Name} images .");
+            Log.Information($"Del {dirInfo.Name} images .");
             foreach (var item in picDelFiles)
                 item.Delete();
         }
 
         if (videoDelFiles?.Any() ?? false)
         {
-            this.Output($"Del {dirInfo.Name} small videos .");
+            Log.Information($"Del {dirInfo.Name} small videos .");
             foreach (var item in videoDelFiles)
                 item.Delete();
         }
 
         if (otherDelFiles?.Any() ?? false)
         {
-            this.Output($"Del {dirInfo.Name} other files .");
+            Log.Information($"Del {dirInfo.Name} other files .");
             foreach (var item in otherDelFiles)
                 item.Delete();
         }
@@ -290,12 +364,12 @@ public partial class MainViewModel : ObservableObject
             dirInfo.Delete(true);
         }
 
-        this.Output($"End del {this.DirPath} .");
+        Log.Information($"End del {this.DirPath} .");
     }
 
     private async Task<List<VideoEnty>> LoadDirAsync(DirectoryInfo dirInfo)
     {
-        this.Output($"Start Load {dirInfo.Name} ...");
+        Log.Information($"Start Load {dirInfo.Name} ...");
         var videoEnties = new List<VideoEnty>();
 
         try
@@ -318,25 +392,28 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            this.Output($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
+            Log.Information($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
             MessageBox.Show($"{dirInfo.FullName}{Environment.NewLine}{ex}", "Error", MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+        finally
+        {
+            Log.Information($"End Load {dirInfo.Name} ...");
+        }
 
-        this.Output($"End Load {dirInfo.Name} ...");
         return videoEnties;
     }
 
     private async Task ProcessForDirsAsync(DirectoryInfo dirInfo)
     {
-        this.Output($"Start Process {this.DirPath} ...");
+        Log.Information($"Start Process {dirInfo.Name} ...");
 
         var files = dirInfo.GetFiles();
         var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
         var videoStoreFiles = videoFiles.Where(m => m.Length >= videoMaxMbSize).ToList();
         if (videoStoreFiles?.Any() ?? false)
         {
-            this.Output($"Global video files added .");
+            Log.Information($"Global video files added .");
 
             lock (this.videoFiles)
                 this.videoFiles.AddRange(videoStoreFiles);
@@ -351,21 +428,20 @@ public partial class MainViewModel : ObservableObject
             }
         }
 
-        this.Output($"End Process {this.DirPath} .");
+        Log.Information($"End Process {dirInfo.Name} .");
     }
 
     private async Task ProcessVideosAsync(string dirName)
     {
-        var taskCount = 8;
+        Log.Information($"Start Process Videos {dirName} .");
+
+        var taskCount = 1;
         var batchSize = this.videoFiles.Count / taskCount;
         batchSize = batchSize <= 0 ? 1 : batchSize;
 
         var array = this.videoFiles.Chunk(batchSize).ToList();
         var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", dirName);
         var tasks = new List<Task>(taskCount);
-
-        if (Directory.Exists(jsonpath))
-            Directory.Delete(jsonpath, true);
 
         Directory.CreateDirectory(jsonpath);
 
@@ -379,10 +455,14 @@ public partial class MainViewModel : ObservableObject
         }
 
         await Task.WhenAll(tasks);
+
+        Log.Information($"End Process Videos {dirName} .");
     }
 
     private async Task ProcessVideosAsync(string dirName, FileInfo[] fileInfos)
     {
+        Log.Information($"Start Process Videos {dirName} , Video count :{fileInfos?.Length}.");
+
         var picCount = 10;
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
@@ -393,15 +473,19 @@ public partial class MainViewModel : ObservableObject
             try
             {
                 if (dicVideos?.ContainsKey(item.FullName) ?? false)
+                {
+                    Log.Information($"{item.Name} Video already exists, processed.");
                     continue;
+                }
 
+                Log.Information($"Process Video {item.Name}.");
                 var times = new List<long>(); // 截图时间点
                 var images = new List<string>(); // 截图文件
                 var length = await this.ParseMediaAsync(libVLC, item);
                 var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
                 var interval = length / picCount; // 截图时间间隔
                 mediaPlayer.Media = media; // 设置视频文件
-                mediaPlayer.EncounteredError += (s, e) => { this.Output($"Error: {e}"); };
+                mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
 
                 for (int i = 0; i < picCount; i++)
                     times.Add(interval * i); // 添加播放时间  
@@ -434,10 +518,14 @@ public partial class MainViewModel : ObservableObject
 
                 videoEnty.Snapshots = new ObservableCollection<string>(images);
                 this.videoCollection.Add(videoEnty);
+
+                this.dicVideos[videoEnty.VideoPath] = videoEnty;
+                var json = JsonConvert.SerializeObject((this.Videos?.Any() ?? false) ? this.Videos : this.videoCollection);
+                File.WriteAllTextAsync(Path.Combine(jsonpath, $"{dirName}.json"), json);
             }
             catch (Exception ex)
             {
-                this.Output($"Error: {item.FullName}{Environment.NewLine}{ex}");
+                Log.Information($"Error: {item.FullName}{Environment.NewLine}{ex}");
             }
             finally
             {
@@ -446,6 +534,85 @@ public partial class MainViewModel : ObservableObject
         }
 
         mediaPlayer.Dispose();
+        Log.Information($"End Process Videos {dirName} , Video count :{fileInfos?.Length}.");
+    }
+
+    private async Task ProcessVideosAsync()
+    {
+        Log.Information($"Start Process Videos , Video count :{this.videoFiles.Count}.");
+
+        var picCount = 10;
+        using LibVLC? libVLC = new LibVLC();
+        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
+        var jsonpath = Path.Combine(AppContext.BaseDirectory, "data", this.dirPath);
+        var jsonfile = $"{Path.GetDirectoryName(this.dirPath)}.json";
+
+        foreach (var item in this.videoFiles)
+        {
+            try
+            {
+                if (dicVideos?.ContainsKey(item.FullName) ?? false)
+                {
+                    Log.Information($"{item.Name} Video already exists, processed.");
+                    continue;
+                }
+
+                Log.Information($"Process Video {item.Name}.");
+                var times = new List<long>(); // 截图时间点
+                var images = new List<string>(); // 截图文件
+                var length = await this.ParseMediaAsync(libVLC, item);
+                var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+                var interval = length / picCount; // 截图时间间隔
+                mediaPlayer.Media = media; // 设置视频文件
+                mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
+
+                for (int i = 0; i < picCount; i++)
+                    times.Add(interval * i); // 添加播放时间  
+
+                mediaPlayer.Play();
+                mediaPlayer.ToggleMute(); // 静音
+
+                while (mediaPlayer.State != VLCState.Playing)
+                    Thread.Sleep(500);
+
+                var videoEnty = new VideoEnty(); // 视频实体
+                videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
+                videoEnty.Length = item.Length / 1024 / 1024; // 视频大小
+                videoEnty.VideoPath = item.FullName; // 视频路径
+                videoEnty.MidifyTime = item.LastWriteTime; // 修改时间
+                videoEnty.VideoDir = jsonpath;
+
+                foreach (var time in times)
+                {
+                    var picName = $"{Guid.NewGuid()}.png";
+                    var snapshot = Path.Combine(jsonpath, picName);
+                    images.Add(snapshot);
+
+                    mediaPlayer.Time = time; // 设置播放时间
+                    await Task.Delay(100); // 等待截图完成
+                    mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
+                    await Task.Delay(100); // 等待截图完成
+                }
+
+                videoEnty.Snapshots = new ObservableCollection<string>(images);
+                this.videoCollection.Add(videoEnty);
+
+                this.dicVideos[videoEnty.VideoPath] = videoEnty;
+                var json = JsonConvert.SerializeObject((this.Videos?.Any() ?? false) ? this.Videos : this.videoCollection);
+                File.WriteAllTextAsync(Path.Combine(jsonpath, jsonfile), json);
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"Error: {item.FullName}{Environment.NewLine}{ex}");
+            }
+            finally
+            {
+                mediaPlayer.Stop();
+            }
+        }
+
+        mediaPlayer.Dispose();
+        Log.Information($"End Process Videos , Video count :{this.videoFiles.Count}.");
     }
 
     private async Task ProcessVideoAsync(VideoEnty enty)
@@ -464,7 +631,7 @@ public partial class MainViewModel : ObservableObject
             var interval = length / picCount; // 截图时间间隔
             var jsonpath = enty.VideoDir;
             mediaPlayer.Media = media; // 设置视频文件
-            mediaPlayer.EncounteredError += (s, e) => { this.Output($"Error: {e}"); };
+            mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
 
             for (int i = 0; i < picCount; i++)
                 times.Add(interval * i); // 添加播放时间  
@@ -498,7 +665,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            this.Output($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
+            Log.Information($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
         }
         finally
         {
@@ -519,7 +686,7 @@ public partial class MainViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                this.Output($"File Del Error:{item}{Environment.NewLine}{ex}");
+                Log.Information($"File Del Error:{item}{Environment.NewLine}{ex}");
             }
         }
     }
@@ -559,11 +726,6 @@ public partial class MainViewModel : ObservableObject
             File.Delete(jsonfile);
 
         File.WriteAllText(jsonfile, json);
-    }
-
-    private void Output(string msg)
-    {
-        this.Log += $"{Environment.NewLine}[{DateTime.Now:HH:mm:ss fff}] {msg} ";
     }
 
     #endregion

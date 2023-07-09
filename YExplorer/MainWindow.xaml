@@ -59,6 +59,7 @@
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="清理" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
             <Button Width="50" Content="保存" Command="{Binding SaveCommand}" Margin="5"></Button>
+            <Button Width="50" Content="日志" Command="{Binding OpenLogsCommand}" Margin="5"></Button>
         </StackPanel>
         <StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto" 
@@ -130,9 +131,6 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-        </StackPanel>
-        <StackPanel>
-            <TextBox Height="200" Width="auto" Text="{Binding Log}" AcceptsReturn="True" ScrollViewer.VerticalScrollBarVisibility="Auto" />
-        </StackPanel>
+        </StackPanel> 
     </StackPanel>
 </Window>
