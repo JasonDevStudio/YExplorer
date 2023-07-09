@@ -99,6 +99,7 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     public async Task ProcessForDirAsync()
+
     {
         try
         {
@@ -628,7 +629,7 @@ public partial class MainViewModel : ObservableObject
                 var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
                 var interval = length / picCount; // 截图时间间隔
                 mediaPlayer.Media = media; // 设置视频文件
-                mediaPlayer.EncounteredError += (s, e) => { Log.Error($"Error: {e}"); };
+                mediaPlayer.EncounteredError += (s, e) => Log.Error($"MediaPlayer Error: {e}");
 
                 for (int i = 0; i < picCount; i++)
                     times.Add(interval * i); // 添加播放时间  
@@ -639,8 +640,23 @@ public partial class MainViewModel : ObservableObject
                 mediaPlayer.Play();
                 mediaPlayer.ToggleMute(); // 静音
 
+
                 while (mediaPlayer.State != VLCState.Playing)
+                {
                     Thread.Sleep(500);
+
+                    if (mediaPlayer.State == VLCState.Ended ||
+                        mediaPlayer.State == VLCState.Error ||
+                        mediaPlayer.State == VLCState.Stopped ||
+                        mediaPlayer.State == VLCState.NothingSpecial)
+                    {
+                        Log.Error($"Error: {mediaPlayer.State}");
+                        break;
+                    } 
+                }
+
+                if (mediaPlayer.State != VLCState.Playing)
+                    continue;
 
                 var videoEnty = new VideoEnty(); // 视频实体
                 videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
