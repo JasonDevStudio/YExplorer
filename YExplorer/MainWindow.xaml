@@ -5,9 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:YExplorer"
         mc:Ignorable="d"  
-        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
-        
-        Title="MainWindow" Height="1000" Width="1550">
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"        
+        Title="YExplorer" Height="1000" Width="1550">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
@@ -36,6 +35,9 @@
             <Setter Property="FontSize" Value="15"></Setter>
             <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
         </Style>
+        <Style TargetType="TextBlock" x:Key="DefaultTextBlock">
+            <Setter Property="FontSize" Value="18"></Setter> 
+        </Style>
         <Style TargetType="ComboBox" x:Key="MyComboBox">
             <Setter Property="FontSize" Value="15"></Setter>
             <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
@@ -56,6 +58,7 @@
                       IsEditable="True"
                       MinWidth="700" Margin="5"></ComboBox>
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
+            <Button Width="80" Content="全部加载" Command="{Binding LoadAllDirsCommand}" Margin="5"></Button>
             <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>            
             <Button Width="50" Content="清原" ToolTip="清理原始目录" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
             <Button Width="50" Content="保存" Command="{Binding SaveCommand}" Margin="5"></Button>
@@ -64,7 +67,7 @@
         </StackPanel>
         <StackPanel>
             <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                          Height="1000" x:Name="scrollViewer"
+                          Height="900" x:Name="scrollViewer"
                           ScrollChanged="ScrollViewer_ScrollChanged">
                 <ScrollViewer.Resources>
                     <Style TargetType="{x:Type ScrollBar}">
@@ -72,7 +75,12 @@
                     </Style>
                 </ScrollViewer.Resources>
                 <ItemsControl ItemsSource="{Binding TmpVideos}" x:Name="itemsControl">
-                    <ItemsControl.ItemTemplate>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel VirtualizingPanel.IsVirtualizing="True"></VirtualizingStackPanel>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate> 
                         <DataTemplate>
                             <Border Style="{StaticResource MyBorder}">
                                 <Grid>
@@ -110,7 +118,16 @@
                                         </ListBox.ItemsPanel>
                                         <ListBox.ItemTemplate>                                            
                                             <DataTemplate>
-                                                <Image Source="{Binding}" Style="{StaticResource MyImage}" />
+                                                <Image Source="{Binding}" Style="{StaticResource MyImage}" >
+                                                    <Image.ToolTip>
+                                                        <ToolTip>
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding}" Style="{StaticResource DefaultTextBlock}" />
+                                                                <Image Source="{Binding}"/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </Image.ToolTip>
+                                                </Image>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox> 

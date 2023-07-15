@@ -158,8 +158,33 @@ public partial class MainViewModel : ObservableObject
             if (_videos?.Any() ?? false)
             {
                 this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
-                var _tmpVideos = this.Videos.Take(20);
+                var _tmpVideos = this.Videos.Take(5);
                 this.TmpVideos = new ObservableCollection<VideoEnty>(_tmpVideos);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public async Task LoadAllDirsAsync()
+    {
+        try
+        {
+            this.Videos.Clear();
+            this.TmpVideos.Clear();
+            this.videoCollection.Clear();
+            var uri = this.DirPath;
+            var dirInfo = new DirectoryInfo(uri);
+            var _videos = await this.LoadDirAsync(dirInfo);
+
+            if (_videos?.Any() ?? false)
+            { 
+                this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
+                this.TmpVideos = this.Videos;
             }
         }
         catch (Exception ex)
@@ -275,7 +300,7 @@ public partial class MainViewModel : ObservableObject
             if (parameter.VerticalOffset == parameter.ScrollableHeight)
             {
                 var index = this.TmpVideos.Count;
-                var videoss = this.Videos.Skip(index).Take(5).ToList();
+                var videoss = this.Videos.Skip(index).Take(2).ToList();
 
                 if (videoss?.Any() ?? false)
                 {
@@ -555,6 +580,7 @@ public partial class MainViewModel : ObservableObject
                 times.RemoveAt(times.Count - 1); // 移除最后一个时间点
                 mediaPlayer.Play();
                 mediaPlayer.ToggleMute(); // 静音
+                await Task.Delay(500);
 
                 while (mediaPlayer.State != VLCState.Playing)
                 {
@@ -582,14 +608,12 @@ public partial class MainViewModel : ObservableObject
 
                 foreach (var time in times)
                 {
-                    await Task.Delay(100); // 等待截图完成
-
                     var picName = $"{Guid.NewGuid()}.png";
                     var snapshot = Path.Combine(datapath, picName);
                     images.Add(snapshot);
 
                     mediaPlayer.Time = time; // 设置播放时间
-                    await Task.Delay(100); // 等待截图完成
+                    await Task.Delay(500); // 等待截图完成
                     mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
                 }
 
@@ -657,7 +681,7 @@ public partial class MainViewModel : ObservableObject
 
                 mediaPlayer.Play();
                 mediaPlayer.ToggleMute(); // 静音
-
+                await Task.Delay(500);
 
                 while (mediaPlayer.State != VLCState.Playing)
                 {
@@ -748,9 +772,10 @@ public partial class MainViewModel : ObservableObject
 
             mediaPlayer.Play();
             mediaPlayer.ToggleMute(); // 静音
+            await Task.Delay(500);
 
             while (mediaPlayer.State != VLCState.Playing)
-                Thread.Sleep(500);
+                await Task.Delay(500); 
 
             enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
             enty.Length = item.Length / 1024 / 1024; // 视频大小
@@ -765,7 +790,7 @@ public partial class MainViewModel : ObservableObject
                 images.Add(snapshot);
 
                 mediaPlayer.Time = time; // 设置播放时间
-                await Task.Delay(2000);// 等待截图完成
+                await Task.Delay(500);// 等待截图完成
                 mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图  
             }
 
