@@ -54,7 +54,7 @@ public partial class MainViewModel : ObservableObject
     private SynchronizedCollection<VideoEnty> videoCollection = new();
     private ConcurrentDictionary<string, VideoEnty> dicVideos = new();
     private ObservableCollection<string> paths = new ObservableCollection<string>();
-
+    private object lockObj = new();
 
     #endregion
 
@@ -117,7 +117,7 @@ public partial class MainViewModel : ObservableObject
 
             Log.Information($"Filterd videos count {this.videoFiles.Count}");
 
-            await this.ProcessVideosAsync();
+            await this.ProcessAllVideosAsync();
             this.Videos = new ObservableCollection<VideoEnty>(this.videoCollection);
 
             Log.Information($"Process videos End。");
@@ -275,7 +275,7 @@ public partial class MainViewModel : ObservableObject
             if (parameter.VerticalOffset == parameter.ScrollableHeight)
             {
                 var index = this.TmpVideos.Count;
-                var videoss = this.Videos.Skip(index).Take(2).ToList();
+                var videoss = this.Videos.Skip(index).Take(5).ToList();
 
                 if (videoss?.Any() ?? false)
                 {
@@ -490,11 +490,11 @@ public partial class MainViewModel : ObservableObject
         Log.Debug($"End Process {dirInfo.Name} .");
     }
 
-    private async Task ProcessVideosAsync(string dirName)
+    private async Task ProcessAllVideosAsync()
     {
-        Log.Information($"Start Process Videos {dirName} .");
+        Log.Information($"Start Process Videos ...");
 
-        var taskCount = 1;
+        var taskCount = 3;
         var batchSize = this.videoFiles.Count / taskCount;
         batchSize = batchSize <= 0 ? 1 : batchSize;
 
@@ -511,18 +511,18 @@ public partial class MainViewModel : ObservableObject
             tasks.Add(Task.Factory.StartNew(async obj =>
             {
                 var videos = obj as FileInfo[];
-                await ProcessVideosAsync(dirName, videos);
+                await ProcessVideosAsync(videos);
             }, array[i]));
         }
 
         await Task.WhenAll(tasks);
 
-        Log.Information($"End Process Videos {dirName} .");
+        Log.Information($"End Process Videos .");
     }
 
-    private async Task ProcessVideosAsync(string dirName, FileInfo[] fileInfos)
+    private async Task ProcessVideosAsync(FileInfo[] fileInfos)
     {
-        Log.Information($"Start Process Videos {dirName} , Video count :{fileInfos?.Length}.");
+        Log.Information($"Start Process Videos , Video count :{fileInfos?.Length}.");
 
         var picCount = 10;
         using var libVLC = new LibVLC();
@@ -551,11 +551,27 @@ public partial class MainViewModel : ObservableObject
                 for (int i = 0; i < picCount; i++)
                     times.Add(interval * i); // 添加播放时间  
 
+                times.RemoveAt(0); // 移除第一个时间点
+                times.RemoveAt(times.Count - 1); // 移除最后一个时间点
                 mediaPlayer.Play();
                 mediaPlayer.ToggleMute(); // 静音
 
                 while (mediaPlayer.State != VLCState.Playing)
+                {
                     Thread.Sleep(500);
+
+                    if (mediaPlayer.State == VLCState.Ended ||
+                        mediaPlayer.State == VLCState.Error ||
+                        mediaPlayer.State == VLCState.Stopped ||
+                        mediaPlayer.State == VLCState.NothingSpecial)
+                    {
+                        Log.Error($"Error: {mediaPlayer.State}");
+                        break;
+                    }
+                }
+
+                if (mediaPlayer.State != VLCState.Playing)
+                    continue;
 
                 var videoEnty = new VideoEnty(); // 视频实体
                 videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
@@ -566,14 +582,14 @@ public partial class MainViewModel : ObservableObject
 
                 foreach (var time in times)
                 {
-                    await Task.Delay(500); // 等待截图完成
+                    await Task.Delay(100); // 等待截图完成
 
                     var picName = $"{Guid.NewGuid()}.png";
                     var snapshot = Path.Combine(datapath, picName);
                     images.Add(snapshot);
 
                     mediaPlayer.Time = time; // 设置播放时间
-                    await Task.Delay(500); // 等待截图完成
+                    await Task.Delay(100); // 等待截图完成
                     mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
                 }
 
@@ -582,7 +598,9 @@ public partial class MainViewModel : ObservableObject
 
                 this.dicVideos[videoEnty.VideoPath] = videoEnty;
                 var json = JsonConvert.SerializeObject((this.Videos?.Any() ?? false) ? this.Videos : this.videoCollection);
-                File.WriteAllTextAsync(jsonfile, json);
+
+                lock (lockObj)
+                    File.WriteAllText(jsonfile, json);
             }
             catch (Exception ex)
             {
@@ -595,7 +613,7 @@ public partial class MainViewModel : ObservableObject
         }
 
         mediaPlayer.Dispose();
-        Log.Information($"End Process Videos {dirName} , Video count :{fileInfos?.Length}.");
+        Log.Information($"End Process Videos , Video count :{fileInfos?.Length}.");
     }
 
     private async Task ProcessVideosAsync()
@@ -652,7 +670,7 @@ public partial class MainViewModel : ObservableObject
                     {
                         Log.Error($"Error: {mediaPlayer.State}");
                         break;
-                    } 
+                    }
                 }
 
                 if (mediaPlayer.State != VLCState.Playing)
@@ -747,9 +765,8 @@ public partial class MainViewModel : ObservableObject
                 images.Add(snapshot);
 
                 mediaPlayer.Time = time; // 设置播放时间
-                await Task.Delay(100); // 等待截图完成
-                mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
-                await Task.Delay(100); // 等待截图完成
+                await Task.Delay(2000);// 等待截图完成
+                mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图  
             }
 
             this.DeleteVideoImages(enty);
