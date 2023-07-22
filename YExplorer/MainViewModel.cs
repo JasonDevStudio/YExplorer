@@ -859,6 +859,7 @@ public partial class MainViewModel : ObservableObject
     /// 异步处理一组视频文件。
     /// </summary>
     /// <param name="fileInfos">包含视频文件信息的数组。</param>
+    /// <param name="picCount">包含截图图片数量的参数，默认10张。</param>
     /// <returns>
     /// 表示异步操作的任务。
     /// </returns>
@@ -866,11 +867,10 @@ public partial class MainViewModel : ObservableObject
     /// 此方法使用LibVLC库初始化一个MediaPlayer对象，并打开和处理一组视频文件。然后在指定的时间间隔内抓取视频帧并将其保存为图像。
     /// 此外，它还创建一个包含视频的元数据和快照的实体，然后将这些实体序列化为JSON，并将其保存到文件中。
     /// </remarks>
-    private async Task ProcessVideosAsync(FileInfo[] fileInfos)
+    private async Task ProcessVideosAsync(FileInfo[] fileInfos, int picCount = 10)
     {
         Log.Information($"Start Process Videos , Video count :{fileInfos?.Length}.");
-
-        var picCount = 10;
+         
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
         var (datapath, jsonfile, name) = this.GetDataDirPath();
@@ -889,7 +889,7 @@ public partial class MainViewModel : ObservableObject
                 var times = new List<long>(); // 截图时间点
                 var images = new List<string>(); // 截图文件
                 var length = await this.ParseMediaAsync(libVLC, item);
-                var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+                using var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
                 var interval = length / picCount; // 截图时间间隔
                 mediaPlayer.Media = media; // 设置视频文件
                 mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
@@ -905,7 +905,7 @@ public partial class MainViewModel : ObservableObject
 
                 while (mediaPlayer.State != VLCState.Playing)
                 {
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
 
                     if (mediaPlayer.State == VLCState.Ended ||
                         mediaPlayer.State == VLCState.Error ||
@@ -952,7 +952,7 @@ public partial class MainViewModel : ObservableObject
             }
             finally
             {
-                mediaPlayer.Stop();
+                mediaPlayer.Stop(); 
             }
         }
 
