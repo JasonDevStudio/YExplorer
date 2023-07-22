@@ -43,25 +43,82 @@ public partial class MainViewModel : ObservableObject
 
     #region Fields
 
+    /// <summary>
+    /// 支持的图片扩展名列表
+    /// </summary>
     private static readonly List<string> picExt = new List<string> { ".jpg", ".png", ".gif", ".bmp" };
 
+    /// <summary>
+    /// 支持的视频扩展名列表
+    /// </summary>
     private static readonly List<string> videoExt = new List<string>
-        { ".mp4", ".avi", ".mkv", ".rmvb", ".wmv", ".ts", ".m4v", ".mov", ".flv" };
+    { ".mp4", ".avi", ".mkv", ".rmvb", ".wmv", ".ts", ".m4v", ".mov", ".flv" };
 
+    /// <summary>
+    /// 存储文件的扩展名列表
+    /// </summary>
     private static readonly List<string> storeExt = new List<string> { ".aria2", ".torrent" };
 
+    /// <summary>
+    /// 表示1MB的大小（单位：字节）
+    /// </summary>
     private readonly decimal oneMbSize = 2 * 1024 * 1024;
+
+    /// <summary>
+    /// 视频最大MB大小（单位：字节）
+    /// </summary>
     private readonly decimal videoMaxMbSize = 100 * 1024 * 1024;
+
+    /// <summary>
+    /// 目录路径
+    /// </summary>
     private string dirPath;
+
+    /// <summary>
+    /// 日志
+    /// </summary>
     private string log;
+
+    /// <summary>
+    /// 视频文件列表
+    /// </summary>
     private List<FileInfo> videoFiles = new();
+
+    /// <summary>
+    /// 视频条目列表
+    /// </summary>
     private ObservableCollection<VideoEntry> videos = new();
+
+    /// <summary>
+    /// 临时视频条目列表
+    /// </summary>
     private ObservableCollection<VideoEntry> _tmpVideos = new();
+
+    /// <summary>
+    /// 线程安全的视频条目集合
+    /// </summary>
     private SynchronizedCollection<VideoEntry> videoCollection = new();
+
+    /// <summary>
+    /// 以字符串为键，VideoEntry为值的线程安全字典
+    /// </summary>
     private ConcurrentDictionary<string, VideoEntry> dicVideos = new();
+
+    /// <summary>
+    /// 路径的集合
+    /// </summary>
     private ObservableCollection<string> paths = new ObservableCollection<string>();
+
+    /// <summary>
+    /// 用于同步的锁对象
+    /// </summary>
     private object lockObj = new();
+
+    /// <summary>
+    /// 主窗口
+    /// </summary>
     private Window manWindow = Application.Current.MainWindow;
+
     #endregion
 
     #region Properties
