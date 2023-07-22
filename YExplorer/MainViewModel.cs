@@ -21,15 +21,21 @@ using Serilog;
 
 namespace YExplorer;
 
+/// <summary>
+/// MainViewModel 类，它继承自 ObservableObject 类。
+/// </summary>
+/// <remarks>
+/// 这个类是 ViewModel 部分，它处理视图中的业务逻辑，并通过数据绑定将数据从 Model 传递到 View。
+/// 在这个类中，可能会定义一些属性和命令，这些属性和命令绑定到视图的控件，以实现界面的各种功能。
+/// </remarks>
 public partial class MainViewModel : ObservableObject
 {
+
+    /// <summary>
+    /// 初始化MainViewModel类的新实例。
+    /// </summary>
     public MainViewModel()
     {
-        //this.ProcessDirCommand = new AsyncRelayCommand(ProcessForDirAsync);
-        this.DeleteAllCommand = new AsyncRelayCommand(DeleteAllAsync);
-        this.LoadDirCommand = new AsyncRelayCommand(LoadDirAsync);
-        this.SaveCommand = new AsyncRelayCommand(SaveAsync);
-
         var dirs = Directory.GetDirectories(@"\\192.168.10.2\99_资源收藏\01_成人资源");
         var dirs1 = Directory.GetDirectories(@"\\192.168.10.2\98_资源收藏\01_成人资源");
         this.paths = new ObservableCollection<string>(dirs.Concat(dirs1));
@@ -37,22 +43,22 @@ public partial class MainViewModel : ObservableObject
 
     #region Fields
 
-    private static List<string> picExt = new List<string> { ".jpg", ".png", ".gif", ".bmp" };
+    private static readonly List<string> picExt = new List<string> { ".jpg", ".png", ".gif", ".bmp" };
 
-    private static List<string> videoExt = new List<string>
+    private static readonly List<string> videoExt = new List<string>
         { ".mp4", ".avi", ".mkv", ".rmvb", ".wmv", ".ts", ".m4v", ".mov", ".flv" };
 
-    private static List<string> storeExt = new List<string> { ".aria2", ".torrent" };
+    private static readonly List<string> storeExt = new List<string> { ".aria2", ".torrent" };
 
-    private decimal oneMbSize = 2 * 1024 * 1024;
-    private decimal videoMaxMbSize = 100 * 1024 * 1024;
+    private readonly decimal oneMbSize = 2 * 1024 * 1024;
+    private readonly decimal videoMaxMbSize = 100 * 1024 * 1024;
     private string dirPath;
     private string log;
     private List<FileInfo> videoFiles = new();
-    private ObservableCollection<VideoEnty> videos = new();
-    private ObservableCollection<VideoEnty> _tmpVideos = new();
-    private SynchronizedCollection<VideoEnty> videoCollection = new();
-    private ConcurrentDictionary<string, VideoEnty> dicVideos = new();
+    private ObservableCollection<VideoEntry> videos = new();
+    private ObservableCollection<VideoEntry> _tmpVideos = new();
+    private SynchronizedCollection<VideoEntry> videoCollection = new();
+    private ConcurrentDictionary<string, VideoEntry> dicVideos = new();
     private ObservableCollection<string> paths = new ObservableCollection<string>();
     private object lockObj = new();
     private Window manWindow = Application.Current.MainWindow;
@@ -60,24 +66,36 @@ public partial class MainViewModel : ObservableObject
 
     #region Properties
 
+    /// <summary>
+    /// Gets or sets the directory path.
+    /// </summary>
     public string DirPath
     {
         get => this.dirPath;
         set => this.SetProperty(ref this.dirPath, value);
     }
 
-    public ObservableCollection<VideoEnty> Videos
+    /// <summary>
+    /// Gets or sets the collection of videos.
+    /// </summary>
+    public ObservableCollection<VideoEntry> Videos
     {
         get => this.videos;
         set => this.SetProperty(ref this.videos, value);
     }
 
-    public ObservableCollection<VideoEnty> TmpVideos
+    /// <summary>
+    /// Gets or sets the collection of temporary videos.
+    /// </summary>
+    public ObservableCollection<VideoEntry> TmpVideos
     {
         get => this._tmpVideos;
         set => this.SetProperty(ref this._tmpVideos, value);
     }
 
+    /// <summary>
+    /// Gets or sets the collection of paths.
+    /// </summary>
     public ObservableCollection<string> Paths
     {
         get => this.paths;
@@ -88,15 +106,19 @@ public partial class MainViewModel : ObservableObject
 
     #region Command
 
-    public IAsyncRelayCommand ProcessDirCommand { get; set; }
-    public IAsyncRelayCommand DeleteAllCommand { get; set; }
-    public IAsyncRelayCommand LoadDirCommand { get; set; }
-    public IAsyncRelayCommand SaveCommand { get; set; }
-
     #endregion
 
     #region API
 
+    /// <summary>
+    /// 异步处理指定目录下的视频。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先清空当前的视频文件列表，然后将当前的视频实体列表转换为字典。之后，获取存储数据的目录路径，创建一个并发字典来存储视频实体，将视频实体列表转换为同步集合。然后，调用`ProcessForDirsAsync`方法处理指定目录下的所有视频，并清除已存在的视频。最后，将处理后的视频集合设置为当前的视频实体列表。
+    /// </remarks>
     [RelayCommand]
     public async Task ProcessForDirAsync()
 
@@ -107,7 +129,7 @@ public partial class MainViewModel : ObservableObject
             var tmpDics = this.Videos?.ToDictionary(mm => mm.VideoPath) ?? new();
             var uri = this.DirPath;
             var dirInfo = new DirectoryInfo(uri);
-            this.dicVideos = new ConcurrentDictionary<string, VideoEnty>(tmpDics);
+            this.dicVideos = new ConcurrentDictionary<string, VideoEntry>(tmpDics);
             this.VideosToSynchronizedCollection();
             await this.ProcessForDirsAsync(dirInfo);
 
@@ -118,7 +140,7 @@ public partial class MainViewModel : ObservableObject
             Log.Information($"Filterd videos count {this.videoFiles.Count}");
 
             await this.ProcessAllVideosAsync();
-            this.Videos = new ObservableCollection<VideoEnty>(this.videoCollection);
+            this.Videos = new ObservableCollection<VideoEntry>(this.videoCollection);
 
             Log.Information($"Process videos End。");
         }
@@ -129,6 +151,16 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 异步删除所有指定的数据。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取存储数据的目录路径，然后调用`DeleteAll`方法删除所有数据。
+    /// </remarks>
+    [RelayCommand]
     public async Task DeleteAllAsync()
     {
         try
@@ -144,6 +176,16 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 异步加载指定目录下的视频实体。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先清空当前的视频列表和临时视频列表，然后获取存储数据的目录路径，并加载该目录下的视频实体。如果加载的视频实体列表不为空，那么它将这些视频实体按照修改时间的降序排列并设置为当前的视频列表。然后，它取出前5个视频实体，设置为临时视频列表。
+    /// </remarks>
+    [RelayCommand]
     public async Task LoadDirAsync()
     {
         try
@@ -157,9 +199,9 @@ public partial class MainViewModel : ObservableObject
 
             if (_videos?.Any() ?? false)
             {
-                this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
+                this.Videos = new ObservableCollection<VideoEntry>(_videos.OrderByDescending(m => m.MidifyTime));
                 var _tmpVideos = this.Videos.Take(5);
-                this.TmpVideos = new ObservableCollection<VideoEnty>(_tmpVideos);
+                this.TmpVideos = new ObservableCollection<VideoEntry>(_tmpVideos);
             }
         }
         catch (Exception ex)
@@ -169,6 +211,15 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 异步加载所有目录下的视频实体。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先清空当前的视频列表和临时视频列表，然后获取存储数据的目录路径，并加载该目录下的视频实体。如果加载的视频实体列表不为空，那么它将这些视频实体按照修改时间的降序排列并设置为当前的视频列表和临时视频列表。
+    /// </remarks>
     [RelayCommand]
     public async Task LoadAllDirsAsync()
     {
@@ -183,7 +234,7 @@ public partial class MainViewModel : ObservableObject
 
             if (_videos?.Any() ?? false)
             {
-                this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
+                this.Videos = new ObservableCollection<VideoEntry>(_videos.OrderByDescending(m => m.MidifyTime));
                 this.TmpVideos = this.Videos;
             }
         }
@@ -194,6 +245,16 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 异步保存当前的数据状态。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取存储数据的目录路径，然后调用`Save`方法保存数据。最后，它返回一个已完成的任务，表示异步操作已完成。
+    /// </remarks>
+    [RelayCommand]
     public async Task SaveAsync()
     {
         try
@@ -213,6 +274,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 播放指定路径的视频文件。
+    /// </summary>
+    /// <param name="param">表示文件路径的对象。</param>
+    /// <remarks>
+    /// 此方法首先将传入的参数转换为字符串路径，然后检查路径是否为空。如果路径不为空，那么它会使用PotPlayer播放器打开并播放该路径的视频文件，然后增加该视频的播放次数。
+    /// </remarks>
     [RelayCommand]
     public void Play(object param)
     {
@@ -234,6 +302,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 打开包含指定文件的文件夹。
+    /// </summary>
+    /// <param name="param">表示文件路径的对象。</param>
+    /// <remarks>
+    /// 此方法首先将传入的参数转换为字符串，然后获取该路径的目录名。最后，如果路径不为空，它会使用Windows资源管理器打开该目录。
+    /// </remarks>
     [RelayCommand]
     public void Folder(object param)
     {
@@ -253,12 +328,19 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 删除一个视频实体及其对应的视频文件。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，那么它就会删除视频文件，然后从视频列表中移除该视频实体，并保存更改。
+    /// </remarks>
     [RelayCommand]
     public void Delete(object param)
     {
         try
         {
-            if (param is VideoEnty video)
+            if (param is VideoEntry video)
             {
                 if (File.Exists(video.VideoPath))
                     File.Delete(video.VideoPath);
@@ -275,12 +357,21 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 删除视频实体对应的文件夹及其内容。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，它会弹出一个消息框询问用户是否确定要删除文件夹。
+    /// 如果用户选择"否"，方法就会返回。如果用户选择"是"，那么它会从视频列表中找出所有在该文件夹内的视频实体，删除对应的视频文件，
+    /// 然后从视频列表中移除这些实体。最后，它会删除整个文件夹，然后保存更改。
+    /// </remarks>
     [RelayCommand]
     public void DeleteFolder(object param)
     {
         try
         {
-            if (param is VideoEnty video)
+            if (param is VideoEntry video)
             {
                 MessageBoxResult result = MessageBox.Show(manWindow, $"Are you sure you want to delete the folder {video.VideoPath}?", "Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
@@ -312,12 +403,22 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 异步处理单个视频文件。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，它就会调用`ProcessVideoAsync`方法来处理这个视频实体。
+    /// </remarks>
     [RelayCommand]
     public async Task ProcessVideoAsync(object param)
     {
         try
         {
-            if (param is VideoEnty enty)
+            if (param is VideoEntry enty)
             {
                 await this.ProcessVideoAsync(enty);
             }
@@ -329,6 +430,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 处理滚动事件。
+    /// </summary>
+    /// <param name="parameter">包含滚动参数的动态对象。</param>
+    /// <remarks>
+    /// 当滚动条滚动到底部时，此方法会从原始的视频列表中获取更多的视频，并添加到临时视频列表中。
+    /// </remarks>
     [RelayCommand]
     public void ScrollChanged(dynamic parameter)
     {
@@ -357,6 +465,12 @@ public partial class MainViewModel : ObservableObject
 
     }
 
+    /// <summary>
+    /// 打开日志目录。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取当前应用程序域的基目录，然后构造日志目录的路径。最后，它使用Windows资源管理器打开日志目录。
+    /// </remarks>
     [RelayCommand]
     public void OpenLogs()
     {
@@ -372,6 +486,12 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 打开数据目录。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取当前应用程序域的基目录，然后构造数据目录的路径。最后，它使用Windows资源管理器打开数据目录。
+    /// </remarks>
     [RelayCommand]
     public void OpenDataDir()
     {
@@ -388,6 +508,13 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 清理指定目录下的部分数据。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取数据目录的路径，并创建一个字典来存储所有的视频实体及其对应的快照文件。然后，它检查数据目录是否存在，
+    /// 如果存在，它会获取目录中所有的PNG文件。接着，这个方法删除不在字典中的文件，也就是说，它会删除那些不是任何视频实体的快照的文件。
+    /// </remarks>
     [RelayCommand]
     public void ClearDataDir()
     {
@@ -397,7 +524,7 @@ public partial class MainViewModel : ObservableObject
             var dirInfo = new DirectoryInfo(this.dirPath);
             var dataConf = this.GetDataDirPath();
             var dataDirPath = dataConf.dir;
-            var dicFiles = new Dictionary<string, VideoEnty>();
+            var dicFiles = new Dictionary<string, VideoEntry>();
             var dataDir = new DirectoryInfo(dataDirPath);
 
             if (this.Videos?.Any() ?? false)
@@ -448,6 +575,12 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 清除指定目录下的所有数据。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取数据目录的路径，然后检查该目录是否存在。如果存在，它会删除该目录及其所有子目录和文件。
+    /// </remarks>
     [RelayCommand]
     public void ClearData()
     {
@@ -477,6 +610,15 @@ public partial class MainViewModel : ObservableObject
 
     #region private
 
+    /// <summary>
+    /// 删除指定目录及其所有子目录下的部分文件。
+    /// </summary>
+    /// <param name="dirInfo">表示目标目录的对象。</param>
+    /// <remarks>
+    /// 此方法首先获取指定目录下的所有文件，并根据文件的扩展名和大小将其分为不同的类别。然后，它会删除满足特定条件的文件，
+    /// 包括图片文件、小于某个阈值的视频文件，以及除了图片、视频和特定文件之外的所有其他文件。最后，这个方法递归地对每一个子目录执行同样的操作，
+    /// 如果一个目录中没有大于某个阈值的视频文件，那么这个目录会被删除。
+    /// </remarks>
     private void DeleteAll(DirectoryInfo dirInfo)
     {
         Log.Information($"Start del {this.DirPath} ...");
@@ -528,10 +670,21 @@ public partial class MainViewModel : ObservableObject
         Log.Information($"End del {this.DirPath} .");
     }
 
-    private async Task<List<VideoEnty>> LoadDirAsync(DirectoryInfo dirInfo)
+    /// <summary>
+    /// 异步加载指定目录下的视频实体列表。
+    /// </summary>
+    /// <param name="dirInfo">表示目标目录的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务，任务的结果是视频实体列表。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取数据文件的路径，然后检查该文件是否存在。如果文件存在，它会从文件中读取JSON字符串，并将其反序列化为视频实体列表。
+    /// 如果文件不存在，它会检查是否有可用的视频实体集合，并将其转换为列表。
+    /// </remarks>
+    private async Task<List<VideoEntry>> LoadDirAsync(DirectoryInfo dirInfo)
     {
         Log.Information($"Start Load {dirInfo.Name} ...");
-        var videoEnties = new List<VideoEnty>();
+        var videoEnties = new List<VideoEntry>();
 
         try
         {
@@ -541,7 +694,7 @@ public partial class MainViewModel : ObservableObject
             if (File.Exists(jsonfile))
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
-                videoEnties = JsonConvert.DeserializeObject<List<VideoEnty>>(json);
+                videoEnties = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
                 return videoEnties;
             }
             else
@@ -566,6 +719,17 @@ public partial class MainViewModel : ObservableObject
         return videoEnties;
     }
 
+    /// <summary>
+    /// 异步处理指定目录及其所有子目录下的视频文件。
+    /// </summary>
+    /// <param name="dirInfo">表示目标目录的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取指定目录下的所有文件，并筛选出视频文件。然后，它将文件大小大于设定阈值的视频文件添加到全局视频文件列表中。
+    /// 接着，这个方法获取指定目录下的所有子目录，并递归地对每一个子目录执行同样的操作。
+    /// </remarks>
     private async Task ProcessForDirsAsync(DirectoryInfo dirInfo)
     {
         Log.Debug($"Start Process {dirInfo.Name} ...");
@@ -593,6 +757,16 @@ public partial class MainViewModel : ObservableObject
         Log.Debug($"End Process {dirInfo.Name} .");
     }
 
+    /// <summary>
+    /// 异步处理所有视频文件。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先将所有的视频文件分割成等大小的批次，然后为每个批次创建一个新的任务来处理。
+    /// 所有的任务都是并行运行的，以提高处理速度。当所有的任务都完成后，这个方法就结束。
+    /// </remarks>
     private async Task ProcessAllVideosAsync()
     {
         Log.Information($"Start Process Videos ...");
@@ -624,6 +798,17 @@ public partial class MainViewModel : ObservableObject
         Log.Information($"End Process Videos .");
     }
 
+    /// <summary>
+    /// 异步处理一组视频文件。
+    /// </summary>
+    /// <param name="fileInfos">包含视频文件信息的数组。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法使用LibVLC库初始化一个MediaPlayer对象，并打开和处理一组视频文件。然后在指定的时间间隔内抓取视频帧并将其保存为图像。
+    /// 此外，它还创建一个包含视频的元数据和快照的实体，然后将这些实体序列化为JSON，并将其保存到文件中。
+    /// </remarks>
     private async Task ProcessVideosAsync(FileInfo[] fileInfos)
     {
         Log.Information($"Start Process Videos , Video count :{fileInfos?.Length}.");
@@ -678,12 +863,12 @@ public partial class MainViewModel : ObservableObject
                 if (mediaPlayer.State != VLCState.Playing)
                     continue;
 
-                var videoEnty = new VideoEnty(); // 视频实体
-                videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
-                videoEnty.Length = item.Length / 1024 / 1024; // 视频大小
-                videoEnty.VideoPath = item.FullName; // 视频路径
-                videoEnty.MidifyTime = item.LastWriteTime; // 修改时间
-                videoEnty.VideoDir = datapath;
+                var VideoEntry = new VideoEntry(); // 视频实体
+                VideoEntry.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
+                VideoEntry.Length = item.Length / 1024 / 1024; // 视频大小
+                VideoEntry.VideoPath = item.FullName; // 视频路径
+                VideoEntry.MidifyTime = item.LastWriteTime; // 修改时间
+                VideoEntry.VideoDir = datapath;
 
                 foreach (var time in times)
                 {
@@ -696,9 +881,9 @@ public partial class MainViewModel : ObservableObject
                     mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
                 }
 
-                videoEnty.Snapshots = new ObservableCollection<string>(images);
-                this.videoCollection.Add(videoEnty); 
-                this.dicVideos[videoEnty.VideoPath] = videoEnty; 
+                VideoEntry.Snapshots = new ObservableCollection<string>(images);
+                this.videoCollection.Add(VideoEntry);
+                this.dicVideos[VideoEntry.VideoPath] = VideoEntry;
                 var json = JsonConvert.SerializeObject(this.videoCollection);
 
                 lock (lockObj)
@@ -718,6 +903,17 @@ public partial class MainViewModel : ObservableObject
         Log.Information($"End Process Videos , Video count :{fileInfos?.Length}.");
     }
 
+    /// <summary>
+    /// 异步处理一组视频文件。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 该方法使用LibVLC库初始化一个MediaPlayer对象。然后遍历集合中的每个视频文件，
+    /// 对于每个视频，它在规定的时间间隔内抓取帧并将其保存为图像。它为每个视频创建一个带有元数据和快照的实体，
+    /// 并将这些实体序列化为JSON文件。
+    /// </remarks>
     private async Task ProcessVideosAsync()
     {
         Log.Information($"Start Process Videos , Video count :{this.videoFiles.Count}.");
@@ -778,12 +974,12 @@ public partial class MainViewModel : ObservableObject
                 if (mediaPlayer.State != VLCState.Playing)
                     continue;
 
-                var videoEnty = new VideoEnty(); // 视频实体
-                videoEnty.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
-                videoEnty.Length = item.Length / 1024 / 1024; // 视频大小
-                videoEnty.VideoPath = item.FullName; // 视频路径
-                videoEnty.MidifyTime = item.LastWriteTime; // 修改时间
-                videoEnty.VideoDir = datapath;
+                var VideoEntry = new VideoEntry(); // 视频实体
+                VideoEntry.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
+                VideoEntry.Length = item.Length / 1024 / 1024; // 视频大小
+                VideoEntry.VideoPath = item.FullName; // 视频路径
+                VideoEntry.MidifyTime = item.LastWriteTime; // 修改时间
+                VideoEntry.VideoDir = datapath;
 
                 foreach (var time in times)
                 {
@@ -797,9 +993,9 @@ public partial class MainViewModel : ObservableObject
                     await Task.Delay(100); // 等待截图完成
                 }
 
-                videoEnty.Snapshots = new ObservableCollection<string>(images);
-                this.videoCollection.Add(videoEnty); 
-                this.dicVideos[videoEnty.VideoPath] = videoEnty;
+                VideoEntry.Snapshots = new ObservableCollection<string>(images);
+                this.videoCollection.Add(VideoEntry);
+                this.dicVideos[VideoEntry.VideoPath] = VideoEntry;
                 var json = JsonConvert.SerializeObject(this.videoCollection);
                 await File.WriteAllTextAsync(jsonfile, json);
             }
@@ -818,12 +1014,18 @@ public partial class MainViewModel : ObservableObject
         Log.Information($"End Process Videos , Video count :{this.videoFiles.Count}.");
     }
 
-    private void LibVLC_Log(object? sender, LogEventArgs e)
-    {
-        Log.Information($"LibVLC : {e.Message}");
-    }
-
-    private async Task ProcessVideoAsync(VideoEnty enty)
+    /// <summary>
+    /// 异步处理单个视频文件。
+    /// </summary>
+    /// <param name="enty">表示视频实体的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 该方法使用LibVLC库初始化一个MediaPlayer对象，并打开指定的视频文件。然后在规定的时间间隔内抓取帧并将其保存为图像。
+    /// 该方法还更新一个已存在的视频实体，并将其序列化为JSON文件。
+    /// </remarks>
+    private async Task ProcessVideoAsync(VideoEntry enty)
     {
         var picCount = 10;
         using var libVLC = new LibVLC();
@@ -892,7 +1094,11 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void DeleteVideoImages(VideoEnty enty)
+    /// <summary>
+    /// 删除视频图片
+    /// </summary>
+    /// <param name="enty">视频实体</param>
+    private void DeleteVideoImages(VideoEntry enty)
     {
         var imgs = enty.Snapshots.ToList();
         enty.Snapshots.Clear();
@@ -910,8 +1116,16 @@ public partial class MainViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 解析视频时长
-    /// </summary> 
+    /// 异步解析视频文件并返回其长度。
+    /// </summary>
+    /// <param name="libVLC">LibVLC库的实例。</param>
+    /// <param name="item">代表视频文件的对象。</param>
+    /// <returns>
+    /// 返回一个任务，该任务表示异步操作，任务的结果是视频文件的长度。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先创建一个 'Media' 对象，并以异步方式解析这个媒体。解析完成后，它会停止解析并获取媒体的长度。
+    /// </remarks> 
     private async Task<long> ParseMediaAsync(LibVLC libVLC, FileInfo item)
     {
         var media = new Media(libVLC, item.FullName, FromType.FromPath);
@@ -921,6 +1135,14 @@ public partial class MainViewModel : ObservableObject
         return length;
     }
 
+    /// <summary>
+    /// 保存视频实体的集合到一个JSON文件中。
+    /// </summary>
+    /// <param name="dirInfo">代表目标目录的对象。</param>
+    /// <remarks>
+    /// 此方法首先检查两个可能的视频实体集合 'Videos' 和 'videoCollection'，如果其中任何一个不为空，则将其序列化为 JSON 字符串。
+    /// 然后，它检查数据路径是否存在，如果不存在则创建它。最后，如果目标 JSON 文件已经存在，它会先删除该文件，然后将 JSON 字符串写入新的文件中。
+    /// </remarks>
     private void Save(DirectoryInfo dirInfo)
     {
         var (datapath, jsonfile, name) = this.GetDataDirPath();
@@ -941,6 +1163,12 @@ public partial class MainViewModel : ObservableObject
         File.WriteAllText(jsonfile, json);
     }
 
+    /// <summary>
+    /// 将当前的视频实体列表转换为同步集合。
+    /// </summary>
+    /// <remarks>
+    /// 如果当前的视频实体列表不为空，那么它将遍历视频实体列表，将每个视频实体添加到视频集合中。
+    /// </remarks>
     private void VideosToSynchronizedCollection()
     {
         if (this.Videos?.Any() ?? false)
@@ -952,6 +1180,9 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 清除已存在的视频文件。
+    /// </summary> 
     private void ClearExists()
     {
         var count = this.videoFiles.Count;
@@ -967,6 +1198,10 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 获取数据目录路径
+    /// </summary>
+    /// <returns>包含目录路径、文件路径和名称的元组</returns>
     private (string dir, string file, string name) GetDataDirPath()
     {
         var dirInfo = new DirectoryInfo(this.DirPath);
@@ -978,57 +1213,4 @@ public partial class MainViewModel : ObservableObject
     }
 
     #endregion
-}
-
-public class VideoEnty : ObservableObject
-{
-    private string _caption;
-    private string videoPath;
-    private long length;
-    private long playCount = 0;
-    public DateTime? midifyTime;
-    private ObservableCollection<string> snapshots;
-    private string videoDir;
-
-    public long Length
-    {
-        get => this.length;
-        set => this.SetProperty(ref this.length, value);
-    }
-
-    public string Caption
-    {
-        get => this._caption;
-        set => this.SetProperty(ref this._caption, value);
-    }
-
-    public string VideoDir
-    {
-        get => this.videoDir;
-        set => this.SetProperty(ref this.videoDir, value);
-    }
-
-    public string VideoPath
-    {
-        get => this.videoPath;
-        set => this.SetProperty(ref this.videoPath, value);
-    }
-
-    public long PlayCount
-    {
-        get => this.playCount;
-        set => this.SetProperty(ref this.playCount, value);
-    }
-
-    public DateTime? MidifyTime
-    {
-        get => this.midifyTime;
-        set => this.SetProperty(ref this.midifyTime, value);
-    }
-
-    public ObservableCollection<string> Snapshots
-    {
-        get => this.snapshots;
-        set => this.SetProperty(ref this.snapshots, value);
-    }
 }
