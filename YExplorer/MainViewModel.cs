@@ -55,7 +55,7 @@ public partial class MainViewModel : ObservableObject
     private ConcurrentDictionary<string, VideoEnty> dicVideos = new();
     private ObservableCollection<string> paths = new ObservableCollection<string>();
     private object lockObj = new();
-
+    private Window manWindow = Application.Current.MainWindow;
     #endregion
 
     #region Properties
@@ -125,7 +125,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -140,7 +140,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -165,7 +165,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -182,7 +182,7 @@ public partial class MainViewModel : ObservableObject
             var _videos = await this.LoadDirAsync(dirInfo);
 
             if (_videos?.Any() ?? false)
-            { 
+            {
                 this.Videos = new ObservableCollection<VideoEnty>(_videos.OrderByDescending(m => m.MidifyTime));
                 this.TmpVideos = this.Videos;
             }
@@ -190,7 +190,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -202,14 +202,14 @@ public partial class MainViewModel : ObservableObject
             var dirInfo = new DirectoryInfo(uri);
             this.Save(dirInfo);
 
-            //MessageBox.Show("Save success!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            //MessageBox.Show(manWindow,"Save success!", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
 
             await Task.CompletedTask;
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -230,7 +230,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -249,7 +249,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -271,7 +271,44 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public void DeleteFolder(object param)
+    {
+        try
+        {
+            if (param is VideoEnty video)
+            {
+                MessageBoxResult result = MessageBox.Show(manWindow, $"Are you sure you want to delete the folder {video.VideoPath}?", "Delete", MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.No)
+                    return;
+
+                var dirName = Path.GetDirectoryName(video.VideoPath);
+
+                var videos = this.Videos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
+                foreach (var item in videos)
+                {
+                    if (File.Exists(item.VideoPath))
+                        File.Delete(item.VideoPath);
+
+                    this.Videos.Remove(item);
+                    this.TmpVideos.Remove(item);
+                }
+
+                if (Directory.Exists(dirName))
+                    Directory.Delete(dirName, true);
+
+                this.SaveAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -288,7 +325,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -314,7 +351,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
 
 
@@ -331,7 +368,23 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public void OpenDataDir()
+    {
+        try
+        {
+            var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            var path = Path.Combine(baseDir.Parent.FullName, "data");
+            Process.Start("explorer.exe", path);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -386,12 +439,37 @@ public partial class MainViewModel : ObservableObject
 
             }
 
-            MessageBox.Show($"清理数据资源完成, 清理文件 {delCount} 个。", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(manWindow, $"清理数据资源完成, 清理文件 {delCount} 个。", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    public void ClearData()
+    {
+        try
+        {
+            var delCount = 0;
+            var dirInfo = new DirectoryInfo(this.dirPath);
+            var dataConf = this.GetDataDirPath();
+            var dataDirPath = dataConf.dir;
+            var dataDir = new DirectoryInfo(dataDirPath);
+
+            if (dataDir.Exists)
+            {
+                dataDir.Delete(true);
+            }
+
+            MessageBox.Show(manWindow, $"清理数据资源完成", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            MessageBox.Show(manWindow, $"{ex}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -477,7 +555,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Information($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
-            MessageBox.Show($"{dirInfo.FullName}{Environment.NewLine}{ex}", "Error", MessageBoxButton.OK,
+            MessageBox.Show(manWindow, $"{dirInfo.FullName}{Environment.NewLine}{ex}", "Error", MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
         finally
@@ -519,7 +597,7 @@ public partial class MainViewModel : ObservableObject
     {
         Log.Information($"Start Process Videos ...");
 
-        var taskCount = 3;
+        var taskCount = 1;
         var batchSize = this.videoFiles.Count / taskCount;
         batchSize = batchSize <= 0 ? 1 : batchSize;
 
@@ -529,7 +607,8 @@ public partial class MainViewModel : ObservableObject
         var jsonfile = dataConf.file;
         var tasks = new List<Task>(taskCount);
 
-        Directory.CreateDirectory(dataDirPath);
+        if (!Directory.Exists(dataDirPath))
+            Directory.CreateDirectory(dataDirPath);
 
         for (int i = 0; i < array.Count; i++)
         {
@@ -618,10 +697,9 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 videoEnty.Snapshots = new ObservableCollection<string>(images);
-                this.videoCollection.Add(videoEnty);
-
-                this.dicVideos[videoEnty.VideoPath] = videoEnty;
-                var json = JsonConvert.SerializeObject((this.Videos?.Any() ?? false) ? this.Videos : this.videoCollection);
+                this.videoCollection.Add(videoEnty); 
+                this.dicVideos[videoEnty.VideoPath] = videoEnty; 
+                var json = JsonConvert.SerializeObject(this.videoCollection);
 
                 lock (lockObj)
                     File.WriteAllText(jsonfile, json);
@@ -720,8 +798,7 @@ public partial class MainViewModel : ObservableObject
                 }
 
                 videoEnty.Snapshots = new ObservableCollection<string>(images);
-                this.videoCollection.Add(videoEnty);
-
+                this.videoCollection.Add(videoEnty); 
                 this.dicVideos[videoEnty.VideoPath] = videoEnty;
                 var json = JsonConvert.SerializeObject(this.videoCollection);
                 await File.WriteAllTextAsync(jsonfile, json);
@@ -775,7 +852,7 @@ public partial class MainViewModel : ObservableObject
             await Task.Delay(500);
 
             while (mediaPlayer.State != VLCState.Playing)
-                await Task.Delay(500); 
+                await Task.Delay(500);
 
             enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
             enty.Length = item.Length / 1024 / 1024; // 视频大小

@@ -5,8 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:YExplorer"
         mc:Ignorable="d"  
+        FontFamily="Microsoft YaHei UI Light"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"        
-        Title="YExplorer" Height="1000" Width="1550">
+        Title="YExplorer" Height="auto" MinWidth="1500">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
@@ -29,28 +30,34 @@
         </Style>
         <Style TargetType="Button">
             <Setter Property="Height" Value="30"></Setter>
+            <Setter Property="Width" Value="250"></Setter>
             <Setter Property="FontSize" Value="17"></Setter>
+            <Setter Property="Margin" Value="0,0,10,0"></Setter>
         </Style>
         <Style TargetType="TextBox">
             <Setter Property="FontSize" Value="15"></Setter>
             <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
         </Style>
         <Style TargetType="TextBlock" x:Key="DefaultTextBlock">
-            <Setter Property="FontSize" Value="18"></Setter> 
+            <Setter Property="FontSize" Value="18"></Setter>
         </Style>
         <Style TargetType="ComboBox" x:Key="MyComboBox">
             <Setter Property="FontSize" Value="15"></Setter>
             <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
         </Style>
-        <Style TargetType="ListBox"> 
+        <Style TargetType="ListBox">
             <Setter Property="Background" Value="#363636"/>
             <Setter Property="Background" Value="#363636"></Setter>
             <Setter Property="HorizontalContentAlignment" Value="Left"></Setter>
             <Setter Property="HorizontalAlignment" Value="Left"></Setter>
         </Style>
     </Window.Resources>
-    <StackPanel>
-        <StackPanel Orientation="Horizontal" Height="40" >
+    <Grid x:Name="MainPanel">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Height="40" Grid.Row="0">
             <Label HorizontalAlignment="Left" VerticalAlignment="Center" Content="目录："></Label>
             <ComboBox Style="{StaticResource MyComboBox}"
                       Text="{Binding DirPath,Mode=TwoWay}" 
@@ -58,16 +65,19 @@
                       IsEditable="True"
                       MinWidth="700" Margin="5"></ComboBox>
             <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
-            <Button Width="80" Content="全部加载" Command="{Binding LoadAllDirsCommand}" Margin="5"></Button>
-            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>            
+            <Button Width="80" Content="全载" ToolTip="全部加载" Command="{Binding LoadAllDirsCommand}" Margin="5"></Button>
+            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="清原" ToolTip="清理原始目录" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
             <Button Width="50" Content="保存" Command="{Binding SaveCommand}" Margin="5"></Button>
-            <Button Width="50" Content="日志" Command="{Binding OpenLogsCommand}" Margin="5"></Button>
+            <Button Width="50" Content="日志" ToolTip="打开日志目录" Command="{Binding OpenLogsCommand}" Margin="5"></Button>
+            <Button Width="50" Content="数据" ToolTip="打开数据目录" Command="{Binding OpenDataDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearDataDirCommand}" Margin="5"></Button>
+            <Button Width="50" Content="删除" ToolTip="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" Margin="5"></Button>
         </StackPanel>
-        <StackPanel>
+        <StackPanel x:Name="ContentPanel" Grid.Row="1">
             <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                          Height="900" x:Name="scrollViewer"
+                          x:Name="scrollViewer"
+                          Height="{Binding ElementName=ContentPanel, Path=ActualHeight}"
                           ScrollChanged="ScrollViewer_ScrollChanged">
                 <ScrollViewer.Resources>
                     <Style TargetType="{x:Type ScrollBar}">
@@ -80,11 +90,12 @@
                             <VirtualizingStackPanel VirtualizingPanel.IsVirtualizing="True"></VirtualizingStackPanel>
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate> 
+                    <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Style="{StaticResource MyBorder}">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
                                         <ColumnDefinition Width="Auto"></ColumnDefinition>
                                         <ColumnDefinition Width="Auto"></ColumnDefinition>
                                         <ColumnDefinition Width="Auto"></ColumnDefinition>
@@ -95,17 +106,22 @@
                                         <RowDefinition Height="50"></RowDefinition>
                                         <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="50"></RowDefinition>
-                                    </Grid.RowDefinitions>
-
-                                    <Label Grid.ColumnSpan="3" Content="{Binding Caption}" Margin="10"/>
-                                    <StackPanel Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="10" >
-                                        <Label Grid.Column="4" Content="{Binding Length}"/>
-                                        <Label Grid.Column="4" Content="MB  "/>
-                                        <Label Grid.Column="4" Content="{Binding MidifyTime}"/>
-                                        <Label Grid.Column="4" Content="  "/>
-                                        <Label Grid.Column="4" Content="{Binding PlayCount}"/>
+                                    </Grid.RowDefinitions> 
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10" >
+                                        <Label Content="{Binding Caption}"/>
+                                        <Label Content="==="/>
+                                        <Label Content="{Binding Length}"/>
+                                        <Label Content="MB"/>
+                                        <Label Content="==="/>
+                                        <Label Content="{Binding PlayCount}"/>
+                                        <Label Content="==="/>
+                                        <Label Content="{Binding MidifyTime}"/>
+                                        <Label Content="==="/> 
                                     </StackPanel>
-                                    <ListBox Grid.Row="1" Grid.ColumnSpan="5" 
+                                    <StackPanel Grid.Row="0" Grid.Column="5" Orientation="Horizontal">
+                                        <Label Content=""/>
+                                    </StackPanel>
+                                    <ListBox Grid.Row="1" Grid.ColumnSpan="6" 
                                              ItemsSource="{Binding Snapshots}" 
                                              Width="{Binding ActualWidth, ElementName=itemsControl}"
                                              HorizontalContentAlignment="Left" 
@@ -116,7 +132,7 @@
                                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" />
                                             </ItemsPanelTemplate>
                                         </ListBox.ItemsPanel>
-                                        <ListBox.ItemTemplate>                                            
+                                        <ListBox.ItemTemplate>
                                             <DataTemplate>
                                                 <Image Source="{Binding}" Style="{StaticResource MyImage}" >
                                                     <Image.ToolTip>
@@ -130,25 +146,30 @@
                                                 </Image>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
-                                    </ListBox> 
-                                    <Button Grid.Row="2" Grid.ColumnSpan="2" Content="Play" 
+                                    </ListBox>
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                        <Button Content="Play" 
                                     Command="{Binding Path=DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding VideoPath}" />
-                                    <Button Grid.Row="2" Grid.Column="2" Content="Folder" 
+                                        <Button Content="Folder" 
                                     Command="{Binding Path=DataContext.FolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding VideoPath}" />
-                                    <Button Grid.Row="2" Grid.Column="3" Content="Del"
+                                        <Button Content="Del"
                                     Command="{Binding Path=DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
-                                    <Button Grid.Row="2" Grid.Column="4" Content="Reset"
+                                        <Button Content="Del folder"
+                                    Command="{Binding Path=DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding }" />
+                                        <Button Content="Reset"
                                     Command="{Binding Path=DataContext.ProcessVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
-        </StackPanel> 
-    </StackPanel>
+        </StackPanel>
+    </Grid>
 </Window>
