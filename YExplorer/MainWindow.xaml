@@ -7,7 +7,7 @@
         mc:Ignorable="d"  
         FontFamily="Microsoft YaHei UI Light"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"        
-        Title="YExplorer" Height="auto" MinWidth="1500">
+        Title="YExplorer" Height="auto" Width="1500">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
