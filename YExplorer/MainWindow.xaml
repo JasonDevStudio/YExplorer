@@ -103,11 +103,15 @@
                                         <ColumnDefinition Width="Auto"></ColumnDefinition>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="50"></RowDefinition>
                                         <RowDefinition Height="Auto"></RowDefinition>
                                         <RowDefinition Height="50"></RowDefinition>
-                                    </Grid.RowDefinitions> 
-                                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10" >
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,0,0">
+                                        <Label Content="{Binding Dir}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,10,0,0" >
                                         <Label Content="{Binding Caption}"/>
                                         <Label Content="==="/>
                                         <Label Content="{Binding Length}"/>
@@ -117,11 +121,8 @@
                                         <Label Content="==="/>
                                         <Label Content="{Binding MidifyTime}"/>
                                         <Label Content="==="/> 
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="0" Grid.Column="5" Orientation="Horizontal">
-                                        <Label Content=""/>
-                                    </StackPanel>
-                                    <ListBox Grid.Row="1" Grid.ColumnSpan="6" 
+                                    </StackPanel> 
+                                    <ListBox Grid.Row="2" Grid.ColumnSpan="6" 
                                              ItemsSource="{Binding Snapshots}" 
                                              Width="{Binding ActualWidth, ElementName=itemsControl}"
                                              HorizontalContentAlignment="Left" 
@@ -147,7 +148,7 @@
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
                                     </ListBox>
-                                    <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                    <StackPanel Grid.Row="3" Orientation="Horizontal">
                                         <Button Content="Play" 
                                     Command="{Binding Path=DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding VideoPath}" />

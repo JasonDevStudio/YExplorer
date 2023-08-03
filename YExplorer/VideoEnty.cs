@@ -9,12 +9,19 @@ namespace YExplorer;
 public class VideoEntry : ObservableObject
 {
     private string _caption;
+    private string dir;
     private string videoPath;
     private long length;
     private long playCount = 0;
     public DateTime? midifyTime;
     private ObservableCollection<string> snapshots;
     private string videoDir;
+
+    public string Dir
+    {
+        get => this.dir;
+        set => this.SetProperty(ref this.dir, value);
+    }
 
     /// <summary>
     /// 获取或设置视频的长度。

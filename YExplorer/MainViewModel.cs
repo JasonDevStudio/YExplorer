@@ -292,6 +292,7 @@ public partial class MainViewModel : ObservableObject
             if (_videos?.Any() ?? false)
             {
                 this.Videos = new ObservableCollection<VideoEntry>(_videos.OrderByDescending(m => m.MidifyTime));
+
                 this.TmpVideos = this.Videos;
             }
         }
@@ -751,8 +752,7 @@ public partial class MainViewModel : ObservableObject
             if (File.Exists(jsonfile))
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
-                videoEnties = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                return videoEnties;
+                videoEnties = JsonConvert.DeserializeObject<List<VideoEntry>>(json); 
             }
             else
             {
@@ -760,6 +760,12 @@ public partial class MainViewModel : ObservableObject
                 {
                     videoEnties = this.videoCollection.ToList();
                 }
+            }
+
+            foreach (var item in videoEnties)
+            {
+                item.Dir = Path.GetDirectoryName(item.VideoPath);
+                item.Dir = item.Dir.Replace(this.DirPath, string.Empty).Trim('\\');
             }
         }
         catch (Exception ex)
