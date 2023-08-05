@@ -29,18 +29,25 @@
         <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
         <VerticalStackLayout Grid.Row="2" x:Name="ManLayout">
             <ScrollView VerticalScrollBarVisibility="Always" 
-                         HeightRequest="{Binding Source={x:Reference ManLayout}, Path=Height}"
-                         Scrolled="ScrollView_Scrolled">
+                        HorizontalScrollBarVisibility="Always"
+                        HeightRequest="{Binding Source={x:Reference ManLayout}, Path=Height}"
+                        WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}"
+                        HorizontalOptions="StartAndExpand"
+                        Scrolled="ScrollView_Scrolled">
                 <CollectionView ItemsSource="{Binding Videos}" 
-                                HorizontalOptions="Start"
-                                VerticalOptions="Start"
-                                VerticalScrollBarVisibility="Always">
+                                HorizontalOptions="StartAndExpand"
+                                VerticalOptions="StartAndExpand"
+                                VerticalScrollBarVisibility="Always"
+                                HorizontalScrollBarVisibility="Always">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical"/>
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Frame BorderColor="White" CornerRadius="0" HasShadow="False">
+                            <Frame BorderColor="White" 
+                                   CornerRadius="0" 
+                                   HasShadow="False"
+                                   WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}">
                                 <VerticalStackLayout>
                                     <HorizontalStackLayout HeightRequest="30">
                                         <Label Text="{Binding Dir}" />
@@ -59,7 +66,8 @@
                                     </HorizontalStackLayout>
                                     <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
                                     <HorizontalStackLayout HeightRequest="210">
-                                        <CollectionView ItemsSource="{Binding Snapshots}">
+                                        <CollectionView ItemsSource="{Binding Snapshots}"
+                                                        WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}">
                                             <CollectionView.ItemsLayout>
                                                 <LinearItemsLayout Orientation="Horizontal"/>
                                             </CollectionView.ItemsLayout>
@@ -81,16 +89,16 @@
                                                 Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}" 
                                                 CommandParameter="{Binding VideoPath}" />
                                         <Button MinimumWidthRequest="150" Text="Folder" 
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=FolderCommand}"
                                                 CommandParameter="{Binding VideoPath}" />
                                         <Button MinimumWidthRequest="150" Text="Del" 
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=DeleteCommand}"
                                                 CommandParameter="{Binding}" />
                                         <Button MinimumWidthRequest="150" Text="Del folder" 
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=DeleteFolderCommand}"
                                                 CommandParameter="{Binding}" />
                                         <Button MinimumWidthRequest="150" Text="Reset" 
-                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=ResetVideoCommand}"
                                                 CommandParameter="{Binding}" />
                                     </HorizontalStackLayout>
                                 </VerticalStackLayout>

@@ -82,11 +82,6 @@ public partial class MainViewModel : ObservableObject
     private string playerPath;
 
     /// <summary>
-    /// 视频条目迭代器
-    /// </summary>
-    private IEnumerator dataEnumerator;
-
-    /// <summary>
     /// 全量视频条目列表
     /// </summary>
     private List<VideoEntry> allVideos = new();
@@ -105,6 +100,11 @@ public partial class MainViewModel : ObservableObject
     /// 以字符串为键，VideoEntry为值的线程安全字典
     /// </summary>
     private ConcurrentDictionary<string, VideoEntry> dicVideos = new();
+
+    /// <summary>
+    /// 当前索引
+    /// </summary>
+    private int currentIndex = 0;
     #endregion
 
     #region Property
@@ -131,7 +131,7 @@ public partial class MainViewModel : ObservableObject
 
     #region ICommand
 
-    public RelayCommand<object> PlayCommand => new RelayCommand<object>(this.Play);
+    public AsyncRelayCommand<object> PlayCommand => new AsyncRelayCommand<object>(this.PlayAsync);
 
     #endregion
 
@@ -152,7 +152,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.Videos.Clear();
-            this.allVideos.Clear();
+            this.allVideos.Clear(); 
             this.loadCount = 1;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
@@ -163,7 +163,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -182,7 +182,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.Videos.Clear();
-            this.allVideos.Clear();
+            this.allVideos.Clear(); 
             this.loadCount = 50;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
@@ -193,7 +193,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -234,7 +234,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -260,7 +260,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -271,7 +271,7 @@ public partial class MainViewModel : ObservableObject
     /// 此方法首先获取当前应用程序域的基目录，然后构造日志目录的路径。最后，它使用Windows资源管理器打开日志目录。
     /// </remarks>
     [RelayCommand]
-    public void OpenLogDir()
+    public async Task OpenLogDirAsync()
     {
         try
         {
@@ -291,12 +291,12 @@ public partial class MainViewModel : ObservableObject
             {
                 // Running on Windows
                 Process.Start("explorer.exe", path);
-            }  
+            }
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -307,32 +307,30 @@ public partial class MainViewModel : ObservableObject
     /// 此方法首先获取当前应用程序域的基目录，然后构造数据目录的路径。最后，它使用Windows资源管理器打开数据目录。
     /// </remarks>
     [RelayCommand]
-    public void OpenDataDir()
+    public async Task OpenDataDirAsync()
     {
         try
-        {
-            var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
-            var path = Path.Combine(baseDir.Parent.FullName, "data"); 
+        {  
             if (DeviceInfo.Platform == DevicePlatform.macOS)
             {
                 // Running on macOS 
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = "/usr/bin/open",
-                    Arguments = path,
+                    Arguments = this.dataPath,
                     UseShellExecute = false
                 });
             }
             else if (DeviceInfo.Platform == DevicePlatform.WinUI)
             {
                 // Running on Windows
-                Process.Start("explorer.exe", path);
+                Process.Start("explorer.exe", this.dataPath);
             }
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -344,7 +342,7 @@ public partial class MainViewModel : ObservableObject
     /// 如果存在，它会获取目录中所有的PNG文件。接着，这个方法删除不在字典中的文件，也就是说，它会删除那些不是任何视频实体的快照的文件。
     /// </remarks>
     [RelayCommand]
-    public void ClearInvalidDataDir()
+    public async Task ClearInvalidDataDirAsync()
     {
         try
         {
@@ -393,13 +391,13 @@ public partial class MainViewModel : ObservableObject
                 }
 
             }
-             
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Info", $"清理数据资源完成, 清理文件 {delCount} 个。");
+
+            await App.Current.MainPage.DisplayAlert("Error", "Info", $"清理数据资源完成, 清理文件 {delCount} 个。", "OK");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
@@ -410,11 +408,13 @@ public partial class MainViewModel : ObservableObject
     /// 此方法首先获取数据目录的路径，然后检查该目录是否存在。如果存在，它会删除该目录及其所有子目录和文件。
     /// </remarks>
     [RelayCommand]
-    public void ClearData()
+    public async Task ClearDataAsync()
     {
         try
         {
-            var delCount = 0; 
+            var delCount = 0;
+            this.allVideos.Clear();
+            this.Videos.Clear();
             var dataConf = this.GetDataDirPath();
             var dataDirPath = dataConf.dir;
             var dataDir = new DirectoryInfo(dataDirPath);
@@ -424,14 +424,37 @@ public partial class MainViewModel : ObservableObject
                 dataDir.Delete(true);
             }
 
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Info", $"清理数据资源完成."); 
+            await App.Current.MainPage.DisplayAlert("Info", $"清理数据资源完成.", "OK");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
+
+    /// <summary>
+    /// 处理滚动事件。
+    /// </summary>
+    /// <param name="parameter">包含滚动参数的动态对象。</param>
+    /// <remarks>
+    /// 当滚动条滚动到底部时，此方法会从原始的视频列表中获取更多的视频，并添加到临时视频列表中。
+    /// </remarks>
+    [RelayCommand]
+    public async Task ScrollChanged(dynamic parameter)
+    {
+        try
+        {
+            LoadNextItem(this.loadCount);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
+        }
+    }
+
+    #region Details
 
     /// <summary>
     /// 播放指定路径的视频文件。
@@ -440,7 +463,7 @@ public partial class MainViewModel : ObservableObject
     /// <remarks>
     /// 此方法首先将传入的参数转换为字符串路径，然后检查路径是否为空。如果路径不为空，那么它会使用PotPlayer播放器打开并播放该路径的视频文件，然后增加该视频的播放次数。
     /// </remarks> 
-    public void Play(object param)
+    public async Task PlayAsync(object param)
     {
         try
         {
@@ -456,33 +479,179 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
 
     /// <summary>
-    /// 处理滚动事件。
+    /// 打开包含指定文件的文件夹。
     /// </summary>
-    /// <param name="parameter">包含滚动参数的动态对象。</param>
+    /// <param name="param">表示文件路径的对象。</param>
     /// <remarks>
-    /// 当滚动条滚动到底部时，此方法会从原始的视频列表中获取更多的视频，并添加到临时视频列表中。
+    /// 此方法首先将传入的参数转换为字符串，然后获取该路径的目录名。最后，如果路径不为空，它会使用Windows资源管理器打开该目录。
     /// </remarks>
     [RelayCommand]
-    public void ScrollChanged(dynamic parameter)
+    public async Task FolderAsync(object param)
     {
         try
         {
-            LoadNextItem(this.loadCount);
+            string path = param as string;
+            var dirPath = Path.GetDirectoryName(path);
+
+            if (DeviceInfo.Platform == DevicePlatform.macOS)
+            {
+                // Running on macOS 
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/open",
+                    Arguments = dirPath,
+                    UseShellExecute = false
+                });
+            }
+            else if (DeviceInfo.Platform == DevicePlatform.WinUI)
+            {
+                // Running on Windows
+                Process.Start("explorer.exe", dirPath);
+            }
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
         }
     }
+
+    /// <summary>
+    /// 删除一个视频实体及其对应的视频文件。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，那么它就会删除视频文件，然后从视频列表中移除该视频实体，并保存更改。
+    /// </remarks>
+    [RelayCommand]
+    public async Task DeleteAsync(object param)
+    {
+        try
+        {
+            if (param is VideoEntry video)
+            {
+                if (File.Exists(video.VideoPath))
+                    File.Delete(video.VideoPath);
+
+                this.Videos.Remove(video);
+                this.allVideos.Remove(video);
+                await this.SaveDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
+        }
+    }
+
+    /// <summary>
+    /// 删除视频实体对应的文件夹及其内容。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，它会弹出一个消息框询问用户是否确定要删除文件夹。
+    /// 如果用户选择"否"，方法就会返回。如果用户选择"是"，那么它会从视频列表中找出所有在该文件夹内的视频实体，删除对应的视频文件，
+    /// 然后从视频列表中移除这些实体。最后，它会删除整个文件夹，然后保存更改。
+    /// </remarks>
+    [RelayCommand]
+    public async Task DeleteFolderAsync(object param)
+    {
+        try
+        {
+            if (param is VideoEntry video)
+            {
+                var result = await App.Current.MainPage.DisplayAlert("Question", $"Are you sure you want to delete the folder {video.VideoPath}?", "Yes", "Cancel");
+
+                if (!result)
+                    return;
+
+                var dirName = Path.GetDirectoryName(video.VideoPath);
+
+                var videos = this.Videos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
+                foreach (var item in videos)
+                {
+                    if (File.Exists(item.VideoPath))
+                        File.Delete(item.VideoPath);
+
+                    this.Videos.Remove(item);
+                    this.allVideos.Remove(item);
+                }
+
+                if (Directory.Exists(dirName))
+                    Directory.Delete(dirName, true);
+
+                await this.SaveDataAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
+        }
+    }
+
+    /// <summary>
+    /// 异步处理单个视频文件。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，它就会调用`ProcessVideoAsync`方法来处理这个视频实体。
+    /// </remarks>
+    [RelayCommand]
+    public async Task ResetVideoAsync(object param)
+    {
+        try
+        {
+            if (param is VideoEntry enty)
+            {
+                await this.ProcessVideoAsync(enty);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            await App.Current.MainPage.DisplayAlert("Error", $"{ex}", "Error");
+        }
+    }
+
+    #endregion
     #endregion
 
     #region Private
+
+    /// <summary>
+    /// 保存视频实体的集合到一个JSON文件中。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先检查两个可能的视频实体集合 'Videos' 和 'videoCollection'，如果其中任何一个不为空，则将其序列化为 JSON 字符串。
+    /// 然后，它检查数据路径是否存在，如果不存在则创建它。最后，如果目标 JSON 文件已经存在，它会先删除该文件，然后将 JSON 字符串写入新的文件中。
+    /// </remarks>
+    private async Task SaveDataAsync()
+    {
+        var (datapath, jsonfile, name) = this.GetDataDirPath();
+
+        var json = string.Empty;
+
+        if (this.allVideos?.Any() ?? false)
+            json = JsonConvert.SerializeObject(this.allVideos, Formatting.Indented);
+
+        if (!Directory.Exists(datapath))
+            Directory.CreateDirectory(datapath);
+
+        if (File.Exists(jsonfile))
+            File.Delete(jsonfile);
+
+        await File.WriteAllTextAsync(jsonfile, json);
+    }
 
     /// <summary>
     /// 异步加载指定目录下的视频实体列表。
@@ -508,8 +677,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
                 this.allVideos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                this.allVideos = this.allVideos.OrderByDescending(x => x.MidifyTime).ToList();
-                this.dataEnumerator = this.allVideos.GetEnumerator();
+                this.allVideos = this.allVideos.OrderByDescending(x => x.MidifyTime).ToList(); 
             }
 
             foreach (var item in this.allVideos)
@@ -558,16 +726,19 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            if (this.dataEnumerator == null)
+            if (!(this.allVideos?.Any() ?? false))
                 return;
 
-            for (int i = 0; i < count; i++)
+            var entries = this.allVideos.Skip(this.Videos.Count).Take(count);
+
+            if (entries?.Any() ?? false)
             {
-                if (this.dataEnumerator.MoveNext())
-                    this.Videos.Add((VideoEntry)this.dataEnumerator.Current);
+                foreach (var video in entries)
+                    this.Videos.Add(video);
             }
         }
     }
+
 
     #region Process
 
@@ -788,6 +959,107 @@ public partial class MainViewModel : ObservableObject
         media.ParseStop();
         var length = media.Duration;
         return length;
+    }
+
+    /// <summary>
+    /// 异步处理单个视频文件。
+    /// </summary>
+    /// <param name="enty">表示视频实体的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 该方法使用LibVLC库初始化一个MediaPlayer对象，并打开指定的视频文件。然后在规定的时间间隔内抓取帧并将其保存为图像。
+    /// 该方法还更新一个已存在的视频实体，并将其序列化为JSON文件。
+    /// </remarks>
+    private async Task ProcessVideoAsync(VideoEntry enty)
+    {
+        var picCount = 10;
+        using var libVLC = new LibVLC();
+        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
+
+        try
+        {
+            var item = new FileInfo(enty.VideoPath); // 视频文件
+            var times = new List<long>(); // 截图时间点
+            var images = new List<string>(); // 截图文件
+            var length = await this.ParseMediaAsync(libVLC, item);
+            var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+            var interval = length / picCount; // 截图时间间隔
+            var (datapath, jsonfile, name) = this.GetDataDirPath();
+            mediaPlayer.Media = media; // 设置视频文件
+            mediaPlayer.EncounteredError += (s, e) => { Log.Error($"Error: {e}"); };
+
+            for (int i = 0; i < picCount; i++)
+                times.Add(interval * i); // 添加播放时间  
+
+            times.RemoveAt(0); // 移除第一个时间点
+            times.RemoveAt(times.Count - 1); // 移除最后一个时间点
+
+            mediaPlayer.Play();
+            mediaPlayer.ToggleMute(); // 静音
+            await Task.Delay(500);
+
+            while (mediaPlayer.State != VLCState.Playing)
+                await Task.Delay(500);
+
+            enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
+            enty.Length = item.Length / 1024 / 1024; // 视频大小
+            enty.VideoPath = item.FullName; // 视频路径
+            enty.MidifyTime = item.LastWriteTime; // 修改时间
+            enty.VideoDir = datapath;
+
+            foreach (var time in times)
+            {
+                var picName = $"{Guid.NewGuid()}.png";
+                var snapshot = Path.Combine(datapath, picName);
+                images.Add(snapshot);
+
+                mediaPlayer.Time = time; // 设置播放时间
+                await Task.Delay(500);// 等待截图完成
+                mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图  
+            }
+
+            this.DeleteVideoImages(enty);
+            enty.Snapshots?.Clear();
+
+            foreach (var img in images)
+            {
+                enty.Snapshots.Add(img);
+            }
+
+            await this.SaveDataAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
+        }
+        finally
+        {
+            mediaPlayer.Stop();
+            mediaPlayer.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 删除视频图片
+    /// </summary>
+    /// <param name="enty">视频实体</param>
+    private void DeleteVideoImages(VideoEntry enty)
+    {
+        var imgs = enty.Snapshots.ToList();
+        enty.Snapshots.Clear();
+        foreach (var item in imgs)
+        {
+            try
+            {
+                File.Delete(item);
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"File Del Error:{item}{Environment.NewLine}{ex}");
+            }
+        }
     }
 
     #endregion
