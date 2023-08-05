@@ -834,7 +834,7 @@ public partial class MainViewModel : ObservableObject
     {
         Log.Information($"Start Process Videos ...");
 
-        var taskCount = 1;
+        var taskCount = 2;
         var batchSize = this.videoFiles.Count / taskCount;
         batchSize = batchSize <= 0 ? 1 : batchSize;
 
