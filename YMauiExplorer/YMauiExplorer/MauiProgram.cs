@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Serilog;
+using YMauiExplorer.Models;
 
 namespace YMauiExplorer;
 
@@ -8,16 +10,13 @@ public static class MauiProgram
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder()
-			.UseMauiApp<App>()
+			.UseMauiApp<App>() 
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-			});
-
-#if DEBUG
-		builder.Logging.AddDebug();
-#endif
+				fonts.AddFont("JETBRAINSMONO-THIN.TTF", "JetBrainsMonoThin");
+            });
 
         Log.Logger = new LoggerConfiguration()
            .MinimumLevel.Debug()
@@ -25,7 +24,10 @@ public static class MauiProgram
            .WriteTo.File("logs\\YExplorer.{Date}.txt", rollingInterval: RollingInterval.Day, outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3} {ThreadId}] {Message:lj}{NewLine}{Exception}")
            .CreateLogger();
 
+		AppSettingsUtils.LoadJson(Path.Combine(AppContext.BaseDirectory, "appsettings.json"));
+
         Log.Information("The application has started.");
-        return builder.Build();
+        var app = builder.Build();
+		return app;
 	}
 }

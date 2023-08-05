@@ -1,8 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using Serilog;
 using UraniumUI.Dialogs.CommunityToolkit;
@@ -27,6 +29,13 @@ public partial class MainViewModel : ObservableObject
         var dirs = Directory.GetDirectories(@"\\192.168.10.2\99_资源收藏\01_成人资源");
         var dirs1 = Directory.GetDirectories(@"\\192.168.10.2\98_资源收藏\01_成人资源");
         this.DirPaths = new ObservableCollection<string>(dirs.Concat(dirs1));
+        this.dataPath = AppSettingsUtils.Default.WinDataPath;
+        this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
+
+#if MACCATALYST
+        this.dataPath = AppSettingsUtils.Default.MacDataPath;
+        this.playerPath = AppSettingsUtils.Default.MacPlayerPath;
+#endif
     }
 
     #region Static
@@ -62,6 +71,16 @@ public partial class MainViewModel : ObservableObject
     #region Fields
 
     /// <summary>
+    /// 数据存储目录
+    /// </summary>
+    private string dataPath;
+
+    /// <summary>
+    /// 播放器路径
+    /// </summary>
+    private string playerPath;
+
+    /// <summary>
     /// 视频条目迭代器
     /// </summary>
     private IEnumerator dataEnumerator;
@@ -79,7 +98,7 @@ public partial class MainViewModel : ObservableObject
     #endregion
 
     #region Property
-
+     
     /// <summary>
     /// 选中目录
     /// </summary>
@@ -90,7 +109,7 @@ public partial class MainViewModel : ObservableObject
     /// 文件目录集合
     /// </summary>
     [ObservableProperty]
-    private ObservableCollection<string> dirPaths;
+    private ObservableCollection<string> dirPaths = new();
 
     /// <summary>
     /// 视频条目列表
@@ -123,8 +142,35 @@ public partial class MainViewModel : ObservableObject
 
             if (this.allVideos?.Any() ?? false)
             {
-                var _tmpVideos = this.Videos.Take(5);
-                this.Videos = new ObservableCollection<VideoEntry>(_tmpVideos);
+                this.LoadNextItem(20);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 播放指定路径的视频文件。
+    /// </summary>
+    /// <param name="param">表示文件路径的对象。</param>
+    /// <remarks>
+    /// 此方法首先将传入的参数转换为字符串路径，然后检查路径是否为空。如果路径不为空，那么它会使用PotPlayer播放器打开并播放该路径的视频文件，然后增加该视频的播放次数。
+    /// </remarks>
+    [RelayCommand]
+    public void Play(object param)
+    {
+        try
+        {
+            string path = param as string;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                Process.Start(this.playerPath, path);
+
+                var video = this.Videos.FirstOrDefault(m => m.VideoPath == path);
+                video.PlayCount++;
             }
         }
         catch (Exception ex)
@@ -152,7 +198,6 @@ public partial class MainViewModel : ObservableObject
     private async Task<List<VideoEntry>> LoadDirAsync(DirectoryInfo dirInfo)
     {
         Log.Information($"Start Load {dirInfo.Name} ...");
-        var videoEnties = new List<VideoEntry>();
 
         try
         {
@@ -162,17 +207,12 @@ public partial class MainViewModel : ObservableObject
             if (File.Exists(jsonfile))
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
-                videoEnties = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-            }
-            else
-            {
-                if (this.allVideos?.Any() ?? false)
-                {
-                    videoEnties = this.allVideos.ToList();
-                }
+                this.allVideos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
+                this.allVideos = this.allVideos.OrderByDescending(x => x.MidifyTime).ToList();
+                this.dataEnumerator = this.allVideos.GetEnumerator();
             }
 
-            foreach (var item in videoEnties)
+            foreach (var item in this.allVideos)
             {
                 item.Dir = Path.GetDirectoryName(item.VideoPath);
                 item.Dir = item.Dir.Replace(this.SelectedDir, string.Empty).Trim('\\');
@@ -189,7 +229,7 @@ public partial class MainViewModel : ObservableObject
             Log.Information($"End Load {dirInfo.Name} ...");
         }
 
-        return videoEnties;
+        return this.allVideos;
     }
 
     /// <summary>
@@ -198,9 +238,8 @@ public partial class MainViewModel : ObservableObject
     /// <returns>包含目录路径、文件路径和名称的元组</returns>
     private (string dir, string file, string name) GetDataDirPath()
     {
-        var dirInfo = new DirectoryInfo(this.SelectedDir);
-        var currDirInfo = new DirectoryInfo(AppContext.BaseDirectory);
-        var dataDirPath = Path.Combine(currDirInfo.Parent.FullName, "data", dirInfo.Name);
+        var dirInfo = new DirectoryInfo(this.SelectedDir); 
+        var dataDirPath = Path.Combine(this.dataPath, dirInfo.Name);
         var name = $"data.json";
         var jsonfile = Path.Combine(dataDirPath, name);
         return (dataDirPath, jsonfile, name);
@@ -213,6 +252,9 @@ public partial class MainViewModel : ObservableObject
     private void LoadNextItem(int count = 1)
     {
         if (this.dataEnumerator == null) return;
+
+        if (count == -1)
+            this.Videos = new ObservableCollection<VideoEntry>(this.allVideos);
 
         for (int i = 0; i < count; i++)
         {

@@ -1,12 +1,13 @@
-﻿namespace YMauiExplorer;
+﻿using Microsoft.Extensions.Configuration;
+using YMauiExplorer.ViewModels;
+
+namespace YMauiExplorer;
 
 public partial class MainPage : ContentPage
-{
-	int count = 0;
-
-	public MainPage()
-	{
-		InitializeComponent();
-	}
+{ 
+    public MainPage()
+    {
+        InitializeComponent();  
+    }
 }
 

@@ -4,23 +4,84 @@
              xmlns:ViewModels="clr-namespace:YMauiExplorer.ViewModels"
              x:Class="YMauiExplorer.MainPage">
 
-	<ContentPage.BindingContext>
-		<ViewModels:MainViewModel/>
-	</ContentPage.BindingContext>
+    <ContentPage.BindingContext>
+        <ViewModels:MainViewModel/>
+    </ContentPage.BindingContext>
 
-    <ScrollView>
-        <VerticalStackLayout
-            Spacing="25"
-            Padding="30,0"
-            VerticalOptions="Center">
-
-            <StackLayout Margin="10,5" Orientation="Horizontal" MaximumHeightRequest="50">
-                <Label HorizontalTextAlignment="Start" VerticalTextAlignment="Center"  Text="目录："/>
-                <Picker SelectedItem="{Binding SelectedDir}" ItemsSource="{Binding DirPaths}" HorizontalTextAlignment="Start" HorizontalOptions="FillAndExpand" />
-                <Button Text="加载" Command="{Binding LoadDirCommand}" MinimumWidthRequest="50"></Button>
-            </StackLayout>
-
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <HorizontalStackLayout Grid.Row="0">
+            <Label HorizontalTextAlignment="Start" VerticalTextAlignment="Center"  Text="目录："/>
+            <Picker SelectedItem="{Binding SelectedDir}" ItemsSource="{Binding DirPaths}" HorizontalTextAlignment="Start" HorizontalOptions="StartAndExpand" />
+            <Button Text="加载" Command="{Binding LoadDirCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
+        </HorizontalStackLayout>
+        <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
+        <VerticalStackLayout Grid.Row="2" x:Name="ManLayout">
+            <ScrollView VerticalScrollBarVisibility="Always" 
+                         HeightRequest="{Binding Source={x:Reference ManLayout}, Path=Height}">
+                <CollectionView ItemsSource="{Binding Videos}" 
+                                HorizontalOptions="Start"
+                                VerticalOptions="Start"
+                                VerticalScrollBarVisibility="Always">
+                    <CollectionView.ItemsLayout>
+                        <GridItemsLayout Orientation="Vertical"/>
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Frame BorderColor="White" CornerRadius="0" HasShadow="False">
+                                <VerticalStackLayout>
+                                    <HorizontalStackLayout HeightRequest="30">
+                                        <Label Text="{Binding Dir}" />
+                                    </HorizontalStackLayout>
+                                    <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
+                                    <HorizontalStackLayout HeightRequest="30">
+                                        <Label Text="{Binding Caption}" />
+                                        <Label Text="===" />
+                                        <Label Text="{Binding Length}" />
+                                        <Label Text="MB" />
+                                        <Label Text="===" />
+                                        <Label Text="{Binding PlayCount}" />
+                                        <Label Text="===" />
+                                        <Label Text="{Binding MidifyTime}" />
+                                        <Label Text="===" />
+                                    </HorizontalStackLayout>
+                                    <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
+                                    <HorizontalStackLayout HeightRequest="210">
+                                        <CollectionView ItemsSource="{Binding Snapshots}">
+                                            <CollectionView.ItemsLayout>
+                                                <LinearItemsLayout Orientation="Horizontal"/>
+                                            </CollectionView.ItemsLayout>
+                                            <CollectionView.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Image Source="{Binding}" HeightRequest="200" WidthRequest="250">
+                                                        <!--Your Tooltip Here-->
+                                                    </Image>
+                                                </DataTemplate>
+                                            </CollectionView.ItemTemplate>
+                                        </CollectionView>
+                                    </HorizontalStackLayout>
+                                    
+                                    <HorizontalStackLayout HeightRequest="35" 
+                                                           Padding="0,5,0,0"
+                                                           HorizontalOptions="StartAndExpand" 
+                                                           VerticalOptions="CenterAndExpand">
+                                        <Button MinimumWidthRequest="150" Text="Play" Command="{Binding PlayCommand}" CommandParameter="{Binding VideoPath}" />
+                                        <Button MinimumWidthRequest="150" Text="Folder" Command="{Binding FolderCommand}" CommandParameter="{Binding VideoPath}" />
+                                        <Button MinimumWidthRequest="150" Text="Del" Command="{Binding DeleteCommand}" CommandParameter="{Binding}" />
+                                        <Button MinimumWidthRequest="150" Text="Del folder" Command="{Binding DeleteFolderCommand}" CommandParameter="{Binding}" />
+                                        <Button MinimumWidthRequest="150" Text="Reset" Command="{Binding ProcessVideoCommand}" CommandParameter="{Binding}" />
+                                    </HorizontalStackLayout>
+                                </VerticalStackLayout>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </ScrollView>
         </VerticalStackLayout>
-    </ScrollView>
+    </Grid>
 
 </ContentPage>
