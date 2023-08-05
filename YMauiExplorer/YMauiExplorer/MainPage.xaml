@@ -14,10 +14,10 @@
             Padding="30,0"
             VerticalOptions="Center">
 
-            <StackLayout Margin="10,5">
+            <StackLayout Margin="10,5" Orientation="Horizontal" MaximumHeightRequest="50">
                 <Label HorizontalTextAlignment="Start" VerticalTextAlignment="Center"  Text="目录："/>
-                <Picker SelectedItem="{Binding SelectedDir}" ItemsSource="{Binding DirPaths}" />
-                <Button Text="加载" Command="{Binding LoadDirCommand}"></Button>
+                <Picker SelectedItem="{Binding SelectedDir}" ItemsSource="{Binding DirPaths}" HorizontalTextAlignment="Start" HorizontalOptions="FillAndExpand" />
+                <Button Text="加载" Command="{Binding LoadDirCommand}" MinimumWidthRequest="50"></Button>
             </StackLayout>
 
         </VerticalStackLayout>
