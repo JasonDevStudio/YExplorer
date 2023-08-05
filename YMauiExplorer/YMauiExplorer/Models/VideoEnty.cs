@@ -6,7 +6,7 @@ namespace YMauiExplorer.Models;
 /// <summary>
 /// 表示视频条目，包含诸如长度、播放次数、修改时间和快照等属性。
 /// </summary>
-public class VideoEntry : ObservableObject
+public partial class VideoEntry : ObservableObject
 {
     private string _caption;
     private string dir;

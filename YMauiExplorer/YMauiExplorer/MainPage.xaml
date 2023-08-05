@@ -64,16 +64,26 @@
                                             </CollectionView.ItemTemplate>
                                         </CollectionView>
                                     </HorizontalStackLayout>
-                                    
+
                                     <HorizontalStackLayout HeightRequest="35" 
                                                            Padding="0,5,0,0"
                                                            HorizontalOptions="StartAndExpand" 
                                                            VerticalOptions="CenterAndExpand">
-                                        <Button MinimumWidthRequest="150" Text="Play" Command="{Binding PlayCommand}" CommandParameter="{Binding VideoPath}" />
-                                        <Button MinimumWidthRequest="150" Text="Folder" Command="{Binding FolderCommand}" CommandParameter="{Binding VideoPath}" />
-                                        <Button MinimumWidthRequest="150" Text="Del" Command="{Binding DeleteCommand}" CommandParameter="{Binding}" />
-                                        <Button MinimumWidthRequest="150" Text="Del folder" Command="{Binding DeleteFolderCommand}" CommandParameter="{Binding}" />
-                                        <Button MinimumWidthRequest="150" Text="Reset" Command="{Binding ProcessVideoCommand}" CommandParameter="{Binding}" />
+                                        <Button MinimumWidthRequest="150" Text="Play" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}" 
+                                                CommandParameter="{Binding VideoPath}" />
+                                        <Button MinimumWidthRequest="150" Text="Folder" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                CommandParameter="{Binding VideoPath}" />
+                                        <Button MinimumWidthRequest="150" Text="Del" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button MinimumWidthRequest="150" Text="Del folder" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Button MinimumWidthRequest="150" Text="Reset" 
+                                                Command="{Binding Source={RelativeSource AncestorType={x:Type ViewModels:MainViewModel}}, Path=PlayCommand}"
+                                                CommandParameter="{Binding}" />
                                     </HorizontalStackLayout>
                                 </VerticalStackLayout>
                             </Frame>

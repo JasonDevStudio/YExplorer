@@ -6,8 +6,6 @@ public partial class App : Application
     {
         InitializeComponent();
 
-        MainPage = new AppShell() { };
-        MainPage.Window.Width = 1400; 
-        MainPage.Window.Width = 1000;
+        MainPage = new AppShell() { }; 
     }
 }

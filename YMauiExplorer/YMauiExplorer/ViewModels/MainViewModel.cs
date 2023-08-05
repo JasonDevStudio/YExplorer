@@ -2,6 +2,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Configuration;
@@ -119,6 +120,12 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
+    #region ICommand
+
+    public RelayCommand<object> PlayCommand => new RelayCommand<object>(this.Play);
+
+    #endregion
+
     #region API
 
     /// <summary>
@@ -158,8 +165,7 @@ public partial class MainViewModel : ObservableObject
     /// <param name="param">表示文件路径的对象。</param>
     /// <remarks>
     /// 此方法首先将传入的参数转换为字符串路径，然后检查路径是否为空。如果路径不为空，那么它会使用PotPlayer播放器打开并播放该路径的视频文件，然后增加该视频的播放次数。
-    /// </remarks>
-    [RelayCommand]
+    /// </remarks> 
     public void Play(object param)
     {
         try
