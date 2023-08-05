@@ -1,11 +1,11 @@
 ﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
-using System.Windows.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Extensions.Configuration;
+using LibVLCSharp.Shared;
 using Newtonsoft.Json;
 using Serilog;
 using UraniumUI.Dialogs.CommunityToolkit;
@@ -96,10 +96,19 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     private object lockObj = new();
 
+    /// <summary>
+    /// 加载数量 默认1
+    /// </summary>
+    private int loadCount = 1;
+
+    /// <summary>
+    /// 以字符串为键，VideoEntry为值的线程安全字典
+    /// </summary>
+    private ConcurrentDictionary<string, VideoEntry> dicVideos = new();
     #endregion
 
     #region Property
-     
+
     /// <summary>
     /// 选中目录
     /// </summary>
@@ -144,13 +153,83 @@ public partial class MainViewModel : ObservableObject
         {
             this.Videos.Clear();
             this.allVideos.Clear();
+            this.loadCount = 1;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
 
             if (this.allVideos?.Any() ?? false)
-            {
-                this.LoadNextItem(20);
-            }
+                this.LoadNextItem(10);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 异步加载所有目录下的视频实体。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先清空当前的视频列表和临时视频列表，然后获取存储数据的目录路径，并加载该目录下的视频实体。如果加载的视频实体列表不为空，那么它将这些视频实体按照修改时间的降序排列并设置为当前的视频列表和临时视频列表。
+    /// </remarks>
+    [RelayCommand]
+    public async Task LoadAllDirsAsync()
+    {
+        try
+        {
+            this.Videos.Clear();
+            this.allVideos.Clear();
+            this.loadCount = 50;
+            var dirInfo = new DirectoryInfo(this.SelectedDir);
+            this.allVideos = await this.LoadDirAsync(dirInfo);
+
+            if (this.allVideos?.Any() ?? false)
+                this.LoadNextItem(this.loadCount);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 异步处理指定目录下的视频。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先清空当前的视频文件列表，然后将当前的视频实体列表转换为字典。之后，获取存储数据的目录路径，创建一个并发字典来存储视频实体，将视频实体列表转换为同步集合。然后，调用`ProcessForDirsAsync`方法处理指定目录下的所有视频，并清除已存在的视频。最后，将处理后的视频集合设置为当前的视频实体列表。
+    /// </remarks>
+    [RelayCommand]
+    public async Task ProcessVideosAsync()
+
+    {
+        try
+        {
+            var videoFiles = new List<FileInfo>();
+            var tmpDics = this.allVideos?.ToDictionary(mm => mm.VideoPath) ?? new();
+            var dirInfo = new DirectoryInfo(this.SelectedDir);
+            this.dicVideos = new ConcurrentDictionary<string, VideoEntry>(tmpDics);
+
+            var files = await this.ProcessForDirsAsync(dirInfo);
+
+            Log.Information($"Scan videos count {files.Count}");
+
+            files = this.ClearExists(files);
+
+            Log.Information($"Filterd videos count {files.Count}");
+
+            await this.ProcessVideosAsync(files);
+            
+            this.LoadNextItem(this.loadCount);
+
+            Log.Information($"Process videos End。");
         }
         catch (Exception ex)
         {
@@ -186,6 +265,26 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 处理滚动事件。
+    /// </summary>
+    /// <param name="parameter">包含滚动参数的动态对象。</param>
+    /// <remarks>
+    /// 当滚动条滚动到底部时，此方法会从原始的视频列表中获取更多的视频，并添加到临时视频列表中。
+    /// </remarks>
+    [RelayCommand]
+    public void ScrollChanged(dynamic parameter)
+    {
+        try
+        {
+            LoadNextItem(this.loadCount);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
     #endregion
 
     #region Private
@@ -244,7 +343,7 @@ public partial class MainViewModel : ObservableObject
     /// <returns>包含目录路径、文件路径和名称的元组</returns>
     private (string dir, string file, string name) GetDataDirPath()
     {
-        var dirInfo = new DirectoryInfo(this.SelectedDir); 
+        var dirInfo = new DirectoryInfo(this.SelectedDir);
         var dataDirPath = Path.Combine(this.dataPath, dirInfo.Name);
         var name = $"data.json";
         var jsonfile = Path.Combine(dataDirPath, name);
@@ -257,16 +356,242 @@ public partial class MainViewModel : ObservableObject
     /// <param name="count">需要加载的数量</param>
     private void LoadNextItem(int count = 1)
     {
-        if (this.dataEnumerator == null) return;
-
         if (count == -1)
-            this.Videos = new ObservableCollection<VideoEntry>(this.allVideos);
-
-        for (int i = 0; i < count; i++)
         {
-            if (this.dataEnumerator.MoveNext())
-                this.Videos.Add((VideoEntry)this.dataEnumerator.Current);
+            count = this.allVideos.Count;
+            this.Videos = new ObservableCollection<VideoEntry>(this.allVideos);
         }
+        else
+        {
+            if (this.dataEnumerator == null)
+                return;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (this.dataEnumerator.MoveNext())
+                    this.Videos.Add((VideoEntry)this.dataEnumerator.Current);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 异步处理指定目录及其所有子目录下的视频文件。
+    /// </summary>
+    /// <param name="dirInfo">表示目标目录的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取指定目录下的所有文件，并筛选出视频文件。然后，它将文件大小大于设定阈值的视频文件添加到全局视频文件列表中。
+    /// 接着，这个方法获取指定目录下的所有子目录，并递归地对每一个子目录执行同样的操作。
+    /// </remarks>
+    private async Task<List<FileInfo>> ProcessForDirsAsync(DirectoryInfo dirInfo)
+    {
+        Log.Debug($"Start Process {dirInfo.Name} ...");
+
+        var files = dirInfo.GetFiles();
+        var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
+        var videoStoreFiles = videoFiles.Where(m => m.Length >= videoMaxMbSize).ToList() ?? new();
+
+        var chidDirs = dirInfo.GetDirectories();
+        if (chidDirs?.Any() ?? false)
+        {
+            foreach (var item in chidDirs)
+            {
+                var chidFiles = await ProcessForDirsAsync(item);
+                if (chidFiles?.Any() ?? false)
+                    videoStoreFiles.AddRange(chidFiles);
+            }
+        }
+
+        Log.Debug($"End Process {dirInfo.Name} .");
+
+        return videoStoreFiles;
+    }
+
+    /// <summary>
+    /// 清除已存在的视频文件。
+    /// </summary> 
+    private List<FileInfo> ClearExists(List<FileInfo> files)
+    { 
+        for (int i = files.Count - 1; i >= 0; i--)
+        {
+            var vfile = files[i];
+            if (this.dicVideos.ContainsKey(vfile.FullName))
+            {
+                Log.Debug($"{vfile.Name} Video already exists, processed.");
+                files.Remove(vfile);
+            }
+        }
+
+        return files;
+    }
+
+
+    /// <summary>
+    /// 异步处理所有视频文件。
+    /// </summary>
+    /// <param name="files">需要解析处理的视频文件集合</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先将所有的视频文件分割成等大小的批次，然后为每个批次创建一个新的任务来处理。
+    /// 所有的任务都是并行运行的，以提高处理速度。当所有的任务都完成后，这个方法就结束。
+    /// </remarks>
+    private async Task ProcessVideosAsync(List<FileInfo> files, int taskCount = 1)
+    {
+        Log.Information($"Start Process Videos ...");
+         
+        var batchSize = files.Count / taskCount;
+        batchSize = batchSize <= 0 ? 1 : batchSize;
+
+        var array = files.Chunk(batchSize).ToList();
+        var dataConf = this.GetDataDirPath();
+        var dataDirPath = dataConf.dir;
+        var jsonfile = dataConf.file;
+        var tasks = new List<Task>(taskCount);
+
+        if (!Directory.Exists(dataDirPath))
+            Directory.CreateDirectory(dataDirPath);
+
+        for (int i = 0; i < array.Count; i++)
+        {
+            tasks.Add(Task.Factory.StartNew(async obj =>
+            {
+                var videos = obj as FileInfo[];
+                await ProcessVideosAsync(videos);
+            }, array[i]));
+        }
+
+        await Task.WhenAll(tasks);
+
+        Log.Information($"End Process Videos .");
+    }
+
+    /// <summary>
+    /// 异步处理一组视频文件。
+    /// </summary>
+    /// <param name="fileInfos">包含视频文件信息的数组。</param>
+    /// <param name="picCount">包含截图图片数量的参数，默认10张。</param>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法使用LibVLC库初始化一个MediaPlayer对象，并打开和处理一组视频文件。然后在指定的时间间隔内抓取视频帧并将其保存为图像。
+    /// 此外，它还创建一个包含视频的元数据和快照的实体，然后将这些实体序列化为JSON，并将其保存到文件中。
+    /// </remarks>
+    private async Task ProcessVideosAsync(FileInfo[] fileInfos, int picCount = 10)
+    {
+        Log.Information($"Start Process Videos , Video count :{fileInfos?.Length}.");
+
+        using var libVLC = new LibVLC();
+        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
+        var (datapath, jsonfile, name) = this.GetDataDirPath();
+
+        foreach (var item in fileInfos)
+        {
+            try
+            {
+                if (dicVideos?.ContainsKey(item.FullName) ?? false)
+                {
+                    Log.Information($"{item.Name} Video already exists, processed.");
+                    continue;
+                }
+
+                Log.Information($"Process Video {item.Name}.");
+                var times = new List<long>(); // 截图时间点
+                var images = new List<string>(); // 截图文件
+                var length = await this.ParseMediaAsync(libVLC, item);
+                using var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+                var interval = length / picCount; // 截图时间间隔
+                mediaPlayer.Media = media; // 设置视频文件
+                mediaPlayer.EncounteredError += (s, e) => { Log.Information($"Error: {e}"); };
+
+                for (int i = 0; i < picCount; i++)
+                    times.Add(interval * i); // 添加播放时间  
+
+                times.RemoveAt(0); // 移除第一个时间点
+                times.RemoveAt(times.Count - 1); // 移除最后一个时间点
+                mediaPlayer.Play();
+                mediaPlayer.ToggleMute(); // 静音
+                await Task.Delay(500);
+
+                while (mediaPlayer.State != VLCState.Playing)
+                {
+                    await Task.Delay(500);
+
+                    if (mediaPlayer.State == VLCState.Ended ||
+                        mediaPlayer.State == VLCState.Error ||
+                        mediaPlayer.State == VLCState.Stopped ||
+                        mediaPlayer.State == VLCState.NothingSpecial)
+                    {
+                        Log.Error($"Error: {mediaPlayer.State}");
+                        break;
+                    }
+                }
+
+                if (mediaPlayer.State != VLCState.Playing)
+                    continue;
+
+                var VideoEntry = new VideoEntry(); // 视频实体
+                VideoEntry.Caption = Path.GetFileNameWithoutExtension(item.Name); // 视频标题
+                VideoEntry.Length = item.Length / 1024 / 1024; // 视频大小
+                VideoEntry.VideoPath = item.FullName; // 视频路径
+                VideoEntry.MidifyTime = item.LastWriteTime; // 修改时间
+                VideoEntry.VideoDir = datapath;
+
+                foreach (var time in times)
+                {
+                    var picName = $"{Guid.NewGuid()}.png";
+                    var snapshot = Path.Combine(datapath, picName);
+                    images.Add(snapshot);
+
+                    mediaPlayer.Time = time; // 设置播放时间
+                    await Task.Delay(500); // 等待截图完成
+                    mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
+                }
+
+                VideoEntry.Snapshots = new ObservableCollection<string>(images);
+                this.allVideos.Add(VideoEntry);
+                this.dicVideos[VideoEntry.VideoPath] = VideoEntry;
+                var json = JsonConvert.SerializeObject(this.allVideos);
+
+                lock (lockObj)
+                    File.WriteAllText(jsonfile, json);
+            }
+            catch (Exception ex)
+            {
+                Log.Information($"Error: {item.FullName}{Environment.NewLine}{ex}");
+            }
+            finally
+            {
+                mediaPlayer.Stop();
+            }
+        }
+
+        mediaPlayer.Dispose();
+        Log.Information($"End Process Videos , Video count :{fileInfos?.Length}.");
+    }
+
+    /// <summary>
+    /// 异步解析视频文件并返回其长度。
+    /// </summary>
+    /// <param name="libVLC">LibVLC库的实例。</param>
+    /// <param name="item">代表视频文件的对象。</param>
+    /// <returns>
+    /// 返回一个任务，该任务表示异步操作，任务的结果是视频文件的长度。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先创建一个 'Media' 对象，并以异步方式解析这个媒体。解析完成后，它会停止解析并获取媒体的长度。
+    /// </remarks> 
+    private async Task<long> ParseMediaAsync(LibVLC libVLC, FileInfo item)
+    {
+        var media = new Media(libVLC, item.FullName, FromType.FromPath);
+        await media.Parse(MediaParseOptions.ParseNetwork);
+        media.ParseStop();
+        var length = media.Duration;
+        return length;
     }
 
     #endregion

@@ -72,6 +72,7 @@
 		<PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
 		<PackageReference Include="System.ServiceModel.Primitives" Version="6.0.0" />
 		<PackageReference Include="UraniumUI.Dialogs.CommunityToolkit" Version="2.5.4" />
+		<PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.18" />
 	</ItemGroup>
 
 	<ItemGroup>
