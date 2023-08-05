@@ -226,10 +226,205 @@ public partial class MainViewModel : ObservableObject
             Log.Information($"Filterd videos count {files.Count}");
 
             await this.ProcessVideosAsync(files);
-            
+
             this.LoadNextItem(this.loadCount);
 
             Log.Information($"Process videos End。");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 异步清理原始目录。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取存储数据的目录路径，然后调用`DeleteAll`方法删除所有数据。
+    /// </remarks>
+    [RelayCommand]
+    public async Task DeleteOriginalAsync()
+    {
+        try
+        {
+            var uri = this.SelectedDir;
+            var dirInfo = new DirectoryInfo(uri);
+            DeleteOriginalDir(dirInfo);
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 打开日志目录。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取当前应用程序域的基目录，然后构造日志目录的路径。最后，它使用Windows资源管理器打开日志目录。
+    /// </remarks>
+    [RelayCommand]
+    public void OpenLogDir()
+    {
+        try
+        {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs");
+
+            if (DeviceInfo.Platform == DevicePlatform.macOS)
+            {
+                // Running on macOS 
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/open",
+                    Arguments = path,
+                    UseShellExecute = false
+                });
+            }
+            else if (DeviceInfo.Platform == DevicePlatform.WinUI)
+            {
+                // Running on Windows
+                Process.Start("explorer.exe", path);
+            }  
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 打开数据目录。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取当前应用程序域的基目录，然后构造数据目录的路径。最后，它使用Windows资源管理器打开数据目录。
+    /// </remarks>
+    [RelayCommand]
+    public void OpenDataDir()
+    {
+        try
+        {
+            var baseDir = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
+            var path = Path.Combine(baseDir.Parent.FullName, "data"); 
+            if (DeviceInfo.Platform == DevicePlatform.macOS)
+            {
+                // Running on macOS 
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "/usr/bin/open",
+                    Arguments = path,
+                    UseShellExecute = false
+                });
+            }
+            else if (DeviceInfo.Platform == DevicePlatform.WinUI)
+            {
+                // Running on Windows
+                Process.Start("explorer.exe", path);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 清理指定目录下的部分数据。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取数据目录的路径，并创建一个字典来存储所有的视频实体及其对应的快照文件。然后，它检查数据目录是否存在，
+    /// 如果存在，它会获取目录中所有的PNG文件。接着，这个方法删除不在字典中的文件，也就是说，它会删除那些不是任何视频实体的快照的文件。
+    /// </remarks>
+    [RelayCommand]
+    public void ClearInvalidDataDir()
+    {
+        try
+        {
+            var delCount = 0;
+            var dirInfo = new DirectoryInfo(GetDataDirPath().dir);
+            var dataConf = this.GetDataDirPath();
+            var dataDirPath = dataConf.dir;
+            var dicFiles = new Dictionary<string, VideoEntry>();
+            var dataDir = new DirectoryInfo(dataDirPath);
+
+            if (this.Videos?.Any() ?? false)
+            {
+                foreach (var item in this.Videos)
+                {
+                    foreach (var path in item.Snapshots)
+                    {
+                        dicFiles.Add(path, item);
+                    }
+                }
+            }
+
+            if (dataDir.Exists)
+            {
+                var files = dataDir.GetFiles("*.png");
+                var length = files.Length;
+
+                if (files?.Any() ?? false)
+                {
+                    for (int i = length - 1; i >= 0; i--)
+                    {
+                        var file = files[i];
+
+                        if (!dicFiles.ContainsKey(file.FullName))
+                        {
+                            try
+                            {
+                                file.Delete();
+                                delCount++;
+                            }
+                            catch (Exception)
+                            {
+                                Log.Warning($"Del Error : {file.FullName}");
+                            }
+                        }
+                    }
+                }
+
+            }
+             
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Info", $"清理数据资源完成, 清理文件 {delCount} 个。");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Error", $"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 清除指定目录下的所有数据。
+    /// </summary>
+    /// <remarks>
+    /// 此方法首先获取数据目录的路径，然后检查该目录是否存在。如果存在，它会删除该目录及其所有子目录和文件。
+    /// </remarks>
+    [RelayCommand]
+    public void ClearData()
+    {
+        try
+        {
+            var delCount = 0; 
+            var dataConf = this.GetDataDirPath();
+            var dataDirPath = dataConf.dir;
+            var dataDir = new DirectoryInfo(dataDirPath);
+
+            if (dataDir.Exists)
+            {
+                dataDir.Delete(true);
+            }
+
+            CommunityToolkitDialogExtensions.ConfirmAsync(Application.Current.MainPage, "Info", $"清理数据资源完成."); 
         }
         catch (Exception ex)
         {
@@ -374,6 +569,8 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    #region Process
+
     /// <summary>
     /// 异步处理指定目录及其所有子目录下的视频文件。
     /// </summary>
@@ -413,7 +610,7 @@ public partial class MainViewModel : ObservableObject
     /// 清除已存在的视频文件。
     /// </summary> 
     private List<FileInfo> ClearExists(List<FileInfo> files)
-    { 
+    {
         for (int i = files.Count - 1; i >= 0; i--)
         {
             var vfile = files[i];
@@ -426,7 +623,6 @@ public partial class MainViewModel : ObservableObject
 
         return files;
     }
-
 
     /// <summary>
     /// 异步处理所有视频文件。
@@ -442,7 +638,7 @@ public partial class MainViewModel : ObservableObject
     private async Task ProcessVideosAsync(List<FileInfo> files, int taskCount = 1)
     {
         Log.Information($"Start Process Videos ...");
-         
+
         var batchSize = files.Count / taskCount;
         batchSize = batchSize <= 0 ? 1 : batchSize;
 
@@ -593,6 +789,72 @@ public partial class MainViewModel : ObservableObject
         var length = media.Duration;
         return length;
     }
+
+    #endregion
+
+    #region 清理
+
+    /// <summary>
+    /// 删除指定目录及其所有子目录下的部分文件。
+    /// </summary>
+    /// <param name="dirInfo">表示目标目录的对象。</param>
+    /// <remarks>
+    /// 此方法首先获取指定目录下的所有文件，并根据文件的扩展名和大小将其分为不同的类别。然后，它会删除满足特定条件的文件，
+    /// 包括图片文件、小于某个阈值的视频文件，以及除了图片、视频和特定文件之外的所有其他文件。最后，这个方法递归地对每一个子目录执行同样的操作，
+    /// 如果一个目录中没有大于某个阈值的视频文件，那么这个目录会被删除。
+    /// </remarks>
+    private void DeleteOriginalDir(DirectoryInfo dirInfo)
+    {
+        Log.Information($"Start del {dirInfo.FullName} ...");
+        var files = dirInfo.GetFiles();
+        var picFiles = files.Where(f => picExt.Contains(f.Extension.ToLower())).ToList();
+        var videoFiles = files.Where(f => videoExt.Contains(f.Extension.ToLower())).ToList();
+        var videoDelFiles = videoFiles.Where(m => m.Length < videoMaxMbSize).ToList();
+        var videoStoreFiles = videoFiles.Where(m => m.Length >= videoMaxMbSize).ToList();
+        var picDelFiles = picFiles.Where(m => m.Length < oneMbSize).ToList();
+        var otherDelFiles = files
+            .Where(m => !picExt.Contains(m.Extension.ToLower()) &&
+                        !videoExt.Contains(m.Extension.ToLower()) &&
+                        !storeExt.Contains(m.Extension.ToLower())).ToList();
+
+        if (picDelFiles?.Any() ?? false)
+        {
+            Log.Information($"Del {dirInfo.Name} images .");
+            foreach (var item in picDelFiles)
+                item.Delete();
+        }
+
+        if (videoDelFiles?.Any() ?? false)
+        {
+            Log.Information($"Del {dirInfo.Name} small videos .");
+            foreach (var item in videoDelFiles)
+                item.Delete();
+        }
+
+        if (otherDelFiles?.Any() ?? false)
+        {
+            Log.Information($"Del {dirInfo.Name} other files .");
+            foreach (var item in otherDelFiles)
+                item.Delete();
+        }
+
+        var chidDirs = dirInfo.GetDirectories();
+        if (chidDirs?.Any() ?? false)
+        {
+            foreach (var item in chidDirs)
+            {
+                DeleteOriginalDir(item);
+            }
+        }
+        else if (!(videoStoreFiles?.Any() ?? false))
+        {
+            dirInfo.Delete(true);
+        }
+
+        Log.Information($"End del {dirInfo} .");
+    }
+
+    #endregion
 
     #endregion
 }

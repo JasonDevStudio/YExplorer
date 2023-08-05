@@ -20,6 +20,11 @@
             <Button Text="加载" ToolTipProperties.Text="懒加载" Command="{Binding LoadDirCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
             <Button Text="全载" ToolTipProperties.Text="全部加载" Command="{Binding LoadAllDirsCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
             <Button Text="处理" ToolTipProperties.Text="视频处理" Command="{Binding ProcessVideosCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
+            <Button Text="清源" ToolTipProperties.Text="清理原始目录" Command="{Binding DeleteOriginalCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
+            <Button Text="日志" ToolTipProperties.Text="打开日志目录" Command="{Binding OpenLogDirCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
+            <Button Text="数据" ToolTipProperties.Text="打开数据目录" Command="{Binding OpenDataDirCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
+            <Button Text="清垃圾" ToolTipProperties.Text="清理数据目录不再使用的图片资源" Command="{Binding ClearInvalidDataDirCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
+            <Button Text="删数据" ToolTipProperties.Text="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
         </HorizontalStackLayout>
         <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
         <VerticalStackLayout Grid.Row="2" x:Name="ManLayout">
