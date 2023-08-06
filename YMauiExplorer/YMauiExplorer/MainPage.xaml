@@ -8,12 +8,15 @@
         <ViewModels:MainViewModel/>
     </ContentPage.BindingContext>
 
-    <Grid Margin="10">
+    <Grid Margin="10" x:Name="MainGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="40"/>
             <RowDefinition Height="10"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
         <HorizontalStackLayout Grid.Row="0">
             <Label HorizontalTextAlignment="Start" VerticalTextAlignment="Center"  Text="目录："/>
             <Picker SelectedItem="{Binding SelectedDir}" ItemsSource="{Binding DirPaths}" HorizontalTextAlignment="Start" HorizontalOptions="StartAndExpand" />
@@ -44,10 +47,7 @@
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Frame BorderColor="White" 
-                                   CornerRadius="0" 
-                                   HasShadow="False"
-                                   WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}">
+                            <Border HorizontalOptions="FillAndExpand">
                                 <VerticalStackLayout>
                                     <HorizontalStackLayout HeightRequest="30">
                                         <Label Text="{Binding Dir}" />
@@ -65,9 +65,8 @@
                                         <Label Text="===" />
                                     </HorizontalStackLayout>
                                     <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
-                                    <HorizontalStackLayout HeightRequest="210">
-                                        <CollectionView ItemsSource="{Binding Snapshots}"
-                                                        WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}">
+                                    <HorizontalStackLayout HeightRequest="200">
+                                        <CollectionView ItemsSource="{Binding Snapshots}">
                                             <CollectionView.ItemsLayout>
                                                 <LinearItemsLayout Orientation="Horizontal"/>
                                             </CollectionView.ItemsLayout>
@@ -102,12 +101,11 @@
                                                 CommandParameter="{Binding}" />
                                     </HorizontalStackLayout>
                                 </VerticalStackLayout>
-                            </Frame>
+                            </Border>
                         </DataTemplate>
                     </CollectionView.ItemTemplate>
                 </CollectionView>
             </ScrollView>
         </VerticalStackLayout>
     </Grid>
-
 </ContentPage>
