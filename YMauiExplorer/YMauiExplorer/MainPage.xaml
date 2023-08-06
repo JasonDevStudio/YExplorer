@@ -35,19 +35,19 @@
         </HorizontalStackLayout>
         <BoxView Grid.Row="1" HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
         <VerticalStackLayout Grid.Row="2" x:Name="ManLayout">
-            <ScrollView VerticalScrollBarVisibility="Always" 
+            <ScrollView VerticalScrollBarVisibility="Always" x:Name="MainScroll"
                         HorizontalScrollBarVisibility="Always"
                         HeightRequest="{Binding Source={x:Reference ManLayout}, Path=Height}" 
                         WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}"
-                        HorizontalOptions="StartAndExpand"
+                        HorizontalOptions="StartAndExpand"                        
                         Scrolled="ScrollView_Scrolled">
-                <CollectionView ItemsSource="{Binding Videos}">
+                <CollectionView ItemsSource="{Binding Videos}" x:Name="MainCView">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical"/>
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Border HeightRequest="400">
+                            <Border HeightRequest="400" HorizontalOptions="Start">
                                 <VerticalStackLayout>
                                     <HorizontalStackLayout HeightRequest="30">
                                         <Label Text="{Binding Dir}" />
@@ -67,14 +67,15 @@
                                     <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
                                     <HorizontalStackLayout>
                                         <CollectionView ItemsSource="{Binding Snapshots}"
-                                                        WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}"
-                                                        HorizontalScrollBarVisibility="Never">
+                                                        WidthRequest="3440"
+                                                        Scrolled="CollectionView_Scrolled"
+                                                        HorizontalScrollBarVisibility="Default">
                                             <CollectionView.ItemsLayout>
                                                 <LinearItemsLayout Orientation="Horizontal"/>
                                             </CollectionView.ItemsLayout>
                                             <CollectionView.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Image Source="{Binding}" 
+                                                    <Image Source="{Binding}"
                                                            HeightRequest="300" 
                                                            WidthRequest="400" 
                                                            Aspect="AspectFit">

@@ -37,6 +37,18 @@ public partial class MainPage : ContentPage
             }
         }
     }
+
+    private async void CollectionView_Scrolled(object sender, ItemsViewScrolledEventArgs e)
+    { 
+        if (e.HorizontalDelta > 0)
+        {
+            await MainScroll.ScrollToAsync(0, MainScroll.ScrollY + e.HorizontalDelta, true);
+        }
+        else if (e.HorizontalDelta < 0)
+        {
+            await MainScroll.ScrollToAsync(0, MainScroll.ScrollY - e.HorizontalDelta, true);
+        }
+    }
 }
 
 

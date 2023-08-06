@@ -110,6 +110,11 @@ public partial class MainViewModel : ObservableObject
     #region Property
 
     /// <summary>
+    /// 宽度
+    /// </summary>
+    public double WindowWidth => Application.Current.MainPage.Window.Width-50;
+
+    /// <summary>
     /// 选中目录
     /// </summary>
     [ObservableProperty]
