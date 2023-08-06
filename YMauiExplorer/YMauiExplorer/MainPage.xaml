@@ -19,7 +19,11 @@
         </Grid.ColumnDefinitions>
         <HorizontalStackLayout Grid.Row="0">
             <Label HorizontalTextAlignment="Start" VerticalTextAlignment="Center"  Text="目录："/>
-            <Picker SelectedItem="{Binding SelectedDir}" ItemsSource="{Binding DirPaths}" HorizontalTextAlignment="Start" HorizontalOptions="StartAndExpand" />
+            <Picker SelectedItem="{Binding SelectedDir}" 
+                    ItemsSource="{Binding DirPaths}" 
+                    HorizontalTextAlignment="Start" 
+                    HorizontalOptions="StartAndExpand"
+                    MinimumWidthRequest="300"/>
             <Button Text="加载" ToolTipProperties.Text="懒加载" Command="{Binding LoadDirCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
             <Button Text="全载" ToolTipProperties.Text="全部加载" Command="{Binding LoadAllDirsCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
             <Button Text="处理" ToolTipProperties.Text="视频处理" Command="{Binding ProcessVideosCommand}" MinimumWidthRequest="50" Margin="10,0"></Button>
@@ -33,21 +37,17 @@
         <VerticalStackLayout Grid.Row="2" x:Name="ManLayout">
             <ScrollView VerticalScrollBarVisibility="Always" 
                         HorizontalScrollBarVisibility="Always"
-                        HeightRequest="{Binding Source={x:Reference ManLayout}, Path=Height}"
+                        HeightRequest="{Binding Source={x:Reference ManLayout}, Path=Height}" 
                         WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}"
                         HorizontalOptions="StartAndExpand"
                         Scrolled="ScrollView_Scrolled">
-                <CollectionView ItemsSource="{Binding Videos}" 
-                                HorizontalOptions="StartAndExpand"
-                                VerticalOptions="StartAndExpand"
-                                VerticalScrollBarVisibility="Always"
-                                HorizontalScrollBarVisibility="Always">
+                <CollectionView ItemsSource="{Binding Videos}">
                     <CollectionView.ItemsLayout>
                         <GridItemsLayout Orientation="Vertical"/>
                     </CollectionView.ItemsLayout>
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
-                            <Border HorizontalOptions="FillAndExpand">
+                            <Border HeightRequest="400">
                                 <VerticalStackLayout>
                                     <HorizontalStackLayout HeightRequest="30">
                                         <Label Text="{Binding Dir}" />
@@ -65,14 +65,19 @@
                                         <Label Text="===" />
                                     </HorizontalStackLayout>
                                     <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
-                                    <HorizontalStackLayout HeightRequest="200">
-                                        <CollectionView ItemsSource="{Binding Snapshots}">
+                                    <HorizontalStackLayout>
+                                        <CollectionView ItemsSource="{Binding Snapshots}"
+                                                        WidthRequest="{Binding Source={x:Reference ManLayout}, Path=Width}"
+                                                        HorizontalScrollBarVisibility="Never">
                                             <CollectionView.ItemsLayout>
                                                 <LinearItemsLayout Orientation="Horizontal"/>
                                             </CollectionView.ItemsLayout>
                                             <CollectionView.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Image Source="{Binding}" HeightRequest="200" WidthRequest="250">
+                                                    <Image Source="{Binding}" 
+                                                           HeightRequest="300" 
+                                                           WidthRequest="400" 
+                                                           Aspect="AspectFit">
                                                         <!--Your Tooltip Here-->
                                                     </Image>
                                                 </DataTemplate>
@@ -81,7 +86,6 @@
                                     </HorizontalStackLayout>
 
                                     <HorizontalStackLayout HeightRequest="35" 
-                                                           Padding="0,5,0,0"
                                                            HorizontalOptions="StartAndExpand" 
                                                            VerticalOptions="CenterAndExpand">
                                         <Button MinimumWidthRequest="150" Text="Play" 
