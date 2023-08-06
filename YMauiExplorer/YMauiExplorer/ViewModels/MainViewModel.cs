@@ -129,12 +129,6 @@ public partial class MainViewModel : ObservableObject
 
     #endregion
 
-    #region ICommand
-
-    public AsyncRelayCommand<object> PlayCommand => new AsyncRelayCommand<object>(this.PlayAsync);
-
-    #endregion
-
     #region API
 
     /// <summary>
@@ -152,7 +146,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.Videos.Clear();
-            this.allVideos.Clear(); 
+            this.allVideos.Clear();
             this.loadCount = 1;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
@@ -182,7 +176,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.Videos.Clear();
-            this.allVideos.Clear(); 
+            this.allVideos.Clear();
             this.loadCount = 50;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
@@ -310,7 +304,7 @@ public partial class MainViewModel : ObservableObject
     public async Task OpenDataDirAsync()
     {
         try
-        {  
+        {
             if (DeviceInfo.Platform == DevicePlatform.macOS)
             {
                 // Running on macOS 
@@ -463,6 +457,7 @@ public partial class MainViewModel : ObservableObject
     /// <remarks>
     /// 此方法首先将传入的参数转换为字符串路径，然后检查路径是否为空。如果路径不为空，那么它会使用PotPlayer播放器打开并播放该路径的视频文件，然后增加该视频的播放次数。
     /// </remarks> 
+    [RelayCommand]
     public async Task PlayAsync(object param)
     {
         try
@@ -677,7 +672,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
                 this.allVideos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                this.allVideos = this.allVideos.OrderByDescending(x => x.MidifyTime).ToList(); 
+                this.allVideos = this.allVideos.OrderByDescending(x => x.MidifyTime).ToList();
             }
 
             foreach (var item in this.allVideos)
@@ -787,8 +782,29 @@ public partial class MainViewModel : ObservableObject
             var vfile = files[i];
             if (this.dicVideos.ContainsKey(vfile.FullName))
             {
+                var video = this.dicVideos[vfile.FullName];
+                if (video.Snapshots?.Any() ?? false)
+                {
+                    var notExistsCount = video.Snapshots.Count(m => !File.Exists(m));
+                    if (notExistsCount > video.Snapshots.Count / 3)
+                    {
+                        this.allVideos?.Remove(video);
+                        this.Videos?.Remove(video);
+                        this.dicVideos?.Remove(vfile.FullName, out var video1);
+                    }
+                    else
+                    {
+                        files.Remove(vfile);
+                    }
+                }
+                else
+                {
+                    this.allVideos?.Remove(video);
+                    this.Videos?.Remove(video);
+                    this.dicVideos?.Remove(vfile.FullName, out var video1);
+                }
+
                 Log.Debug($"{vfile.Name} Video already exists, processed.");
-                files.Remove(vfile);
             }
         }
 
