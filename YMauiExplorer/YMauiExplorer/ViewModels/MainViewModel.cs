@@ -32,6 +32,7 @@ public partial class MainViewModel : ObservableObject
         this.DirPaths = new ObservableCollection<string>(dirs.Concat(dirs1));
         this.dataPath = AppSettingsUtils.Default.WinDataPath;
         this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
+        this.taskCount = AppSettingsUtils.Default.TaskCount;
 
 #if MACCATALYST
         this.dataPath = AppSettingsUtils.Default.MacDataPath;
@@ -65,11 +66,16 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 视频最大MB大小（单位：字节）
     /// </summary>
-    private readonly decimal videoMaxMbSize = 100 * 1024 * 1024;
+    private readonly decimal videoMaxMbSize = 110 * 1024 * 1024;
 
     #endregion
 
     #region Fields
+
+    /// <summary>
+    /// 任务数量
+    /// </summary>
+    private int taskCount = 1;
 
     /// <summary>
     /// 数据存储目录
@@ -112,7 +118,8 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 宽度
     /// </summary>
-    public double WindowWidth => Application.Current.MainPage.Window.Width-50;
+    [ObservableProperty]
+    private double windowWidth = Application.Current.MainPage.Window.Width - 50;
 
     /// <summary>
     /// 选中目录
@@ -187,7 +194,7 @@ public partial class MainViewModel : ObservableObject
             this.allVideos = await this.LoadDirAsync(dirInfo);
 
             if (this.allVideos?.Any() ?? false)
-                this.LoadNextItem(this.loadCount);
+                this.LoadNextItem(this.allVideos.Count);
         }
         catch (Exception ex)
         {
@@ -207,7 +214,6 @@ public partial class MainViewModel : ObservableObject
     /// </remarks>
     [RelayCommand]
     public async Task ProcessVideosAsync()
-
     {
         try
         {
@@ -224,7 +230,7 @@ public partial class MainViewModel : ObservableObject
 
             Log.Information($"Filterd videos count {files.Count}");
 
-            await this.ProcessVideosAsync(files);
+            await this.ProcessVideosAsync(files, this.taskCount);
 
             this.LoadNextItem(this.loadCount);
 
@@ -738,7 +744,6 @@ public partial class MainViewModel : ObservableObject
             }
         }
     }
-
 
     #region Process
 

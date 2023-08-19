@@ -30,5 +30,10 @@ public class AppSettings
     /// 获取或设置 Mac 平台的播放器路径。
     /// </summary>
     public string MacPlayerPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// 获取或设置是否启用多线程下载。
+    /// </summary>
+    public int TaskCount { get; set; } = 1;
 }
 

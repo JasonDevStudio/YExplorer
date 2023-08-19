@@ -38,15 +38,25 @@ public partial class MainPage : ContentPage
         }
     }
 
+    /// <summary>
+    /// 当 ScrollView 控件滚动时调用。
+    /// </summary>
+    /// <param name="sender">触发事件的 ScrollView 对象。</param>
+    /// <param name="e">包含事件数据的 ScrolledEventArgs 对象。</param>
     private async void CollectionView_Scrolled(object sender, ItemsViewScrolledEventArgs e)
-    { 
-        if (e.HorizontalDelta > 0)
+    {
+        // 检查绑定上下文是否为 MainViewModel 类的实例
+        if (this.BindingContext is MainViewModel mvm)
         {
-            await MainScroll.ScrollToAsync(0, MainScroll.ScrollY + e.HorizontalDelta, true);
-        }
-        else if (e.HorizontalDelta < 0)
-        {
-            await MainScroll.ScrollToAsync(0, MainScroll.ScrollY - e.HorizontalDelta, true);
+            var listHeight = e.VerticalOffset + e.VerticalDelta; // 获取可见区域的高度
+            var visibleHeight = e.LastVisibleItemIndex - e.FirstVisibleItemIndex + 1; // 判断是否滚动到底部
+            if (listHeight == visibleHeight)
+            {
+                // 在这里执行您想要的操作 Console.WriteLine(“已经滚动到底部”);
+                // 将触发事件的对象转换为 ScrollView
+                var scrollViewer = sender as ScrollView;
+                mvm.ScrollChanged(scrollViewer);
+            }
         }
     }
 }

@@ -66,10 +66,8 @@
                                     </HorizontalStackLayout>
                                     <BoxView HeightRequest="1" BackgroundColor="Black" HorizontalOptions="FillAndExpand" />
                                     <HorizontalStackLayout>
-                                        <CollectionView ItemsSource="{Binding Snapshots}"
-                                                        WidthRequest="3440"
-                                                        Scrolled="CollectionView_Scrolled"
-                                                        HorizontalScrollBarVisibility="Default">
+                                        <CollectionView ItemsSource="{Binding Snapshots}" 
+                                                        HorizontalScrollBarVisibility="Always"                                                        >
                                             <CollectionView.ItemsLayout>
                                                 <LinearItemsLayout Orientation="Horizontal"/>
                                             </CollectionView.ItemsLayout>
@@ -77,9 +75,7 @@
                                                 <DataTemplate>
                                                     <Image Source="{Binding}"
                                                            HeightRequest="300" 
-                                                           WidthRequest="400" 
-                                                           Aspect="AspectFit">
-                                                        <!--Your Tooltip Here-->
+                                                           WidthRequest="400" >
                                                     </Image>
                                                 </DataTemplate>
                                             </CollectionView.ItemTemplate>
