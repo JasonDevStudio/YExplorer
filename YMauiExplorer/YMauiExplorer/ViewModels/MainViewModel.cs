@@ -676,14 +676,27 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            this.allVideos = new();
             var dataConf = this.GetDataDirPath();
             var dataDirPath = dataConf.dir;
             var jsonfile = dataConf.file;
             if (File.Exists(jsonfile))
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
-                this.allVideos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                this.allVideos = this.allVideos.OrderByDescending(x => x.MidifyTime).ToList();
+                var _videos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
+                _videos = _videos.OrderByDescending(x => x.MidifyTime).ToList();
+
+                foreach (var video in _videos)
+                { 
+                    if (video.Snapshots?.Any() ?? false)
+                    {
+                        var notExistsCount = video.Snapshots.Count(m => !File.Exists(m));
+                        if (notExistsCount < video.Snapshots.Count / 3)
+                        {
+                            this.allVideos?.Add(video);
+                        }
+                    }
+                }   
             }
 
             foreach (var item in this.allVideos)
