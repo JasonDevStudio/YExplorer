@@ -24,7 +24,7 @@ namespace YExplorer
         {
             if (this.DataContext is MainViewModel mvm)
             {
-                var scrollViewer = sender as ScrollViewer;
+                var scrollViewer = sender as HandyControl.Controls.ScrollViewer;
                 dynamic obj = new { VerticalOffset = e.VerticalOffset, ScrollableHeight = scrollViewer.ScrollableHeight };
                 mvm.ScrollChanged(obj);
             }

@@ -77,7 +77,7 @@
             <Button Width="50" Content="删除" ToolTip="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" Margin="5"></Button>
         </StackPanel>
         <StackPanel x:Name="ContentPanel" Grid.Row="1">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" 
+            <hc:ScrollViewer VerticalScrollBarVisibility="Auto" 
                           x:Name="scrollViewer"
                           Height="{Binding ElementName=ContentPanel, Path=ActualHeight}"
                           ScrollChanged="ScrollViewer_ScrollChanged">
@@ -111,7 +111,7 @@
                                         <RowDefinition Height="50"></RowDefinition>
                                     </Grid.RowDefinitions>
                                     <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,0,0">
-                                        <Label Content="{Binding Dir}"/>
+                                        <Label Content="{Binding Dir}"/>                                         
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,10,0,0" >
                                         <Label Content="{Binding Caption}"/>
@@ -123,7 +123,21 @@
                                         <Label Content="==="/>
                                         <Label Content="{Binding MidifyTime}"/>
                                         <Label Content="==="/> 
-                                    </StackPanel> 
+                                    </StackPanel>
+                                    <!--<hc:CoverView Grid.Row="2" Grid.ColumnSpan="6" Margin="27" MaxWidth="{Binding ActualWidth, ElementName=itemsControl}" ItemWidth="250" ItemHeight="250" ItemsSource="{Binding Snapshots}">
+                                        <hc:CoverView.ItemHeaderTemplate>
+                                            <DataTemplate>
+                                                <Image Source="{Binding}" Style="{StaticResource MyImage}"/>
+                                            </DataTemplate>
+                                        </hc:CoverView.ItemHeaderTemplate>
+                                        <hc:CoverView.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Margin="10" Height="800">
+                                                    <Image Source="{Binding}" Height="800"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </hc:CoverView.ItemTemplate>
+                                    </hc:CoverView>-->
                                     <ListBox Grid.Row="2" Grid.ColumnSpan="6" 
                                              ItemsSource="{Binding Snapshots}" 
                                              Width="{Binding ActualWidth, ElementName=itemsControl}"
@@ -172,7 +186,7 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-            </ScrollViewer>
+            </hc:ScrollViewer>
         </StackPanel>
     </Grid>
 </hc:GlowWindow>
