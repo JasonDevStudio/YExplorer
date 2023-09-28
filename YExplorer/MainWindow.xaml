@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:YExplorer"
+        xmlns:local="clr-namespace:YExplorer.ViewModels"
         mc:Ignorable="d"  
         FontFamily="Microsoft YaHei UI Light"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"        
@@ -59,19 +59,18 @@
         </Grid.RowDefinitions>
         <StackPanel Orientation="Horizontal" Height="40" Grid.Row="0">
             <Label HorizontalAlignment="Left" VerticalAlignment="Center" Content="目录："></Label>
-            <ComboBox Style="{StaticResource MyComboBox}"
-                      Text="{Binding DirPath,Mode=TwoWay}" 
-                      ItemsSource="{Binding Paths}" 
+            <ComboBox Style="{StaticResource MyComboBox}" 
+                      ItemsSource="{Binding DirPaths}" 
+                      SelectedItem="{Binding SelectedDir,Mode=TwoWay}"
                       IsEditable="True"
                       MinWidth="700" Margin="5"></ComboBox>
-            <Button Width="50" Content="加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
+            <Button Width="50" Content="加载" ToolTip="懒加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
             <Button Width="80" Content="全载" ToolTip="全部加载" Command="{Binding LoadAllDirsCommand}" Margin="5"></Button>
-            <Button Width="50" Content="处理" Command="{Binding ProcessForDirCommand}" Margin="5"></Button>
-            <Button Width="50" Content="清原" ToolTip="清理原始目录" Command="{Binding DeleteAllCommand}" Margin="5"></Button>
-            <Button Width="50" Content="保存" Command="{Binding SaveCommand}" Margin="5"></Button>
-            <Button Width="50" Content="日志" ToolTip="打开日志目录" Command="{Binding OpenLogsCommand}" Margin="5"></Button>
+            <Button Width="50" Content="处理" ToolTip="视频处理" Command="{Binding ProcessVideosCommand}" Margin="5"></Button>
+            <Button Width="50" Content="清源" ToolTip="清理原始目录" Command="{Binding DeleteOriginalCommand}" Margin="5"></Button>
+            <Button Width="50" Content="日志" ToolTip="打开日志目录" Command="{Binding OpenLogDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="数据" ToolTip="打开数据目录" Command="{Binding OpenDataDirCommand}" Margin="5"></Button>
-            <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearDataDirCommand}" Margin="5"></Button>
+            <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearInvalidDataDirCommand}" Margin="5"></Button>
             <Button Width="50" Content="删除" ToolTip="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" Margin="5"></Button>
         </StackPanel>
         <StackPanel x:Name="ContentPanel" Grid.Row="1">
@@ -84,7 +83,7 @@
                         <Setter Property="Width" Value="20"/>
                     </Style>
                 </ScrollViewer.Resources>
-                <ItemsControl ItemsSource="{Binding TmpVideos}" x:Name="itemsControl">
+                <ItemsControl ItemsSource="{Binding Videos}" x:Name="itemsControl">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <VirtualizingStackPanel VirtualizingPanel.IsVirtualizing="True"></VirtualizingStackPanel>
@@ -162,7 +161,7 @@
                                     Command="{Binding Path=DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
                                         <Button Content="Reset"
-                                    Command="{Binding Path=DataContext.ProcessVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    Command="{Binding Path=DataContext.ResetVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
                                     </StackPanel>
                                 </Grid>
