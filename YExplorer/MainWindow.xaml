@@ -1,12 +1,15 @@
-﻿<Window x:Class="YExplorer.MainWindow"
+﻿<hc:GlowWindow x:Class="YExplorer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:YExplorer.ViewModels"
+        xmlns:hc="https://handyorg.github.io/handycontrol"
         mc:Ignorable="d"  
         FontFamily="Microsoft YaHei UI Light"
-        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"        
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors"     
+        Style="{StaticResource WindowGlow}"
+        Background="{DynamicResource SecondaryRegionBrush}"
         Title="YExplorer" Height="auto" Width="1500">
     <Window.DataContext>
         <local:MainViewModel />
@@ -172,4 +175,4 @@
             </ScrollViewer>
         </StackPanel>
     </Grid>
-</Window>
+</hc:GlowWindow>
