@@ -16,6 +16,13 @@ public partial class VideoEntry : ObservableObject
     public DateTime? midifyTime;
     private ObservableCollection<string> snapshots;
     private string videoDir;
+    private int evaluate;
+
+    public int Evaluate
+    {
+        get => this.evaluate;
+        set => this.SetProperty(ref this.evaluate, value);
+    }
 
     public string Dir
     {

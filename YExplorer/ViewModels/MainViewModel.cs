@@ -7,6 +7,8 @@ using System.Reflection;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using DevExpress.Pdf.Native;
+using HandyControl.Controls;
 using LibVLCSharp.Shared;
 using Newtonsoft.Json;
 using Serilog;
@@ -72,7 +74,14 @@ public partial class MainViewModel : ObservableObject
     /// <summary>
     /// 任务数量
     /// </summary>
+    [ObservableProperty]
     private int taskCount = 1;
+
+    /// <summary>
+    /// 任务数量集合
+    /// </summary>
+    [ObservableProperty]
+    private List<int> taskCounts = new List<int> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
 
     /// <summary>
     /// 数据存储目录
@@ -100,14 +109,20 @@ public partial class MainViewModel : ObservableObject
     private int loadCount = 1;
 
     /// <summary>
+    /// 首次加载数量
+    /// </summary>
+    private int firstLoadCount = 15;
+
+    /// <summary>
     /// 以字符串为键，VideoEntry为值的线程安全字典
     /// </summary>
     private ConcurrentDictionary<string, VideoEntry> dicVideos = new();
 
     /// <summary>
-    /// 当前索引
+    /// 是否全量加载
     /// </summary>
-    private int currentIndex = 0;
+    private bool isAllLoad = false;
+
     #endregion
 
     #region Property
@@ -116,7 +131,7 @@ public partial class MainViewModel : ObservableObject
     /// 宽度
     /// </summary>
     [ObservableProperty]
-    private double windowWidth = Application.Current.MainWindow.Width - 50;
+    private double windowWidth = System.Windows.Application.Current.MainWindow.Width - 50;
 
     /// <summary>
     /// 选中目录
@@ -157,16 +172,19 @@ public partial class MainViewModel : ObservableObject
             this.Videos.Clear();
             this.allVideos.Clear();
             this.loadCount = 1;
+            this.isAllLoad = false;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
 
             if (this.allVideos?.Any() ?? false)
-                this.LoadNextItem(10);
+                this.LoadNextItem(firstLoadCount);
+
+            Growl.Success("加载完成");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -187,16 +205,19 @@ public partial class MainViewModel : ObservableObject
             this.Videos.Clear();
             this.allVideos.Clear();
             this.loadCount = 50;
+            this.isAllLoad = true;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
 
             if (this.allVideos?.Any() ?? false)
                 this.LoadNextItem(this.allVideos.Count);
+
+            Growl.Success("全部加载完成");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -232,11 +253,12 @@ public partial class MainViewModel : ObservableObject
             this.LoadNextItem(this.loadCount);
 
             Log.Information($"Process videos End。");
+            Growl.Success($"Process videos End。");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -257,12 +279,13 @@ public partial class MainViewModel : ObservableObject
             var uri = this.SelectedDir;
             var dirInfo = new DirectoryInfo(uri);
             DeleteOriginalDir(dirInfo);
+            Growl.Success("清理原始目录完成。");
             await Task.CompletedTask;
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -285,7 +308,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -306,7 +329,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -368,12 +391,12 @@ public partial class MainViewModel : ObservableObject
 
             }
 
-            MessageBox.Show($"清理数据资源完成, 清理文件 {delCount} 个。");
+            Growl.Success($"清理数据资源完成, 清理文件 {delCount} 个。");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -400,12 +423,12 @@ public partial class MainViewModel : ObservableObject
                 dataDir.Delete(true);
             }
 
-            MessageBox.Show($"清理数据资源完成.");
+            Growl.Success($"清理数据资源完成.");
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -426,7 +449,49 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
+        }
+    }
+
+    /// <summary>
+    /// 处理滚动事件。
+    /// </summary>
+    /// <param name="args">包含参数的动态对象。</param> 
+    [RelayCommand]
+    public async Task OrderAsync(string args)
+    {
+        try
+        {
+            switch (args)
+            {
+                case "1":
+                    this.allVideos = this.allVideos.OrderBy(m => m.MidifyTime).ToList();
+                    break;
+                case "2":
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.MidifyTime).ToList();
+                    break;
+                case "3":
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ToList();
+                    break;
+                case "0":
+                default:
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ToList();
+                    break;
+            }
+
+            this.Videos.Clear();
+
+            if (this.isAllLoad)
+                this.LoadNextItem(this.allVideos.Count);
+            else
+                this.LoadNextItem(firstLoadCount);
+
+            Growl.Success("排序完成");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -456,7 +521,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -481,7 +546,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -510,7 +575,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -530,7 +595,7 @@ public partial class MainViewModel : ObservableObject
         {
             if (param is VideoEntry video)
             {
-                var result = MessageBox.Show($"Are you sure you want to delete the folder {video.VideoPath}?", caption: "Question", MessageBoxButton.OKCancel);
+                var result = HandyControl.Controls.MessageBox.Show($"Are you sure you want to delete the folder {video.VideoPath}?", caption: "Question", MessageBoxButton.OKCancel);
 
                 if (result == MessageBoxResult.Cancel)
                     return;
@@ -556,7 +621,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -583,7 +648,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            MessageBox.Show($"{ex}", "Error");
+            Growl.Error($"{ex}");
         }
     }
 
@@ -599,6 +664,7 @@ public partial class MainViewModel : ObservableObject
     /// 此方法首先检查两个可能的视频实体集合 'Videos' 和 'videoCollection'，如果其中任何一个不为空，则将其序列化为 JSON 字符串。
     /// 然后，它检查数据路径是否存在，如果不存在则创建它。最后，如果目标 JSON 文件已经存在，它会先删除该文件，然后将 JSON 字符串写入新的文件中。
     /// </remarks>
+    [RelayCommand]
     private async Task SaveDataAsync()
     {
         var (datapath, jsonfile, name) = this.GetDataDirPath();
@@ -666,7 +732,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Information($"Error: {dirInfo.FullName}{Environment.NewLine}{ex}");
-            MessageBox.Show($"{dirInfo.FullName}{Environment.NewLine}{ex}");
+            Growl.Error($"{dirInfo.FullName}{Environment.NewLine}{ex}");
         }
         finally
         {
