@@ -86,6 +86,7 @@
                                 Command="{Binding OrderCommand}" 
                                 Margin="5"
                                 Height="35"
+                                FontSize="15"
                                 CommandParameter="0"
                                 HorizontalAlignment="Stretch">
                     <hc:SplitButton.DropDownContent>

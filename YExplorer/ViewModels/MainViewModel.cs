@@ -8,6 +8,8 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using DevExpress.Pdf.Native;
+using Emgu.CV.Structure;
+using Emgu.CV;
 using HandyControl.Controls;
 using LibVLCSharp.Shared;
 using Newtonsoft.Json;
@@ -236,7 +238,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var videoFiles = new List<FileInfo>();
-            var tmpDics = this.allVideos?.ToDictionary(mm => mm.VideoPath) ?? new();
+            var tmpDics = this.allVideos.DistinctBy(m=>m.VideoPath)?.ToDictionary(mm => mm.VideoPath) ?? new();
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.dicVideos = new ConcurrentDictionary<string, VideoEntry>(tmpDics);
 
@@ -831,7 +833,7 @@ public partial class MainViewModel : ObservableObject
                 var video = this.dicVideos[vfile.FullName];
                 if (video.Snapshots?.Any() ?? false)
                 {
-                    var notExistsCount = video.Snapshots.Count(m => !File.Exists(m));
+                    var notExistsCount = video.Snapshots.Count(m => !File.Exists(m) || IsImageBlack(m));
                     if (notExistsCount > video.Snapshots.Count / 3)
                     {
                         this.allVideos?.Remove(video);
@@ -1122,6 +1124,40 @@ public partial class MainViewModel : ObservableObject
                 Log.Error($"File Del Error:{item}{Environment.NewLine}{ex}");
             }
         }
+    }
+
+    /// <summary>
+    /// 判断图像是否全黑
+    /// </summary>
+    /// <param name="imageFile">要检查的图像文件</param>
+    /// <returns>如果图像全黑则返回true，否则返回false</returns>
+    private bool IsImageBlack(string imageFile)
+    {
+        var image = new Mat(imageFile);
+
+        // 获取图像的宽度和高度
+        int width = image.Width;
+        int height = image.Height;
+
+        // 将图像转换为灰度图像
+        Mat grayImage = new Mat();
+        CvInvoke.CvtColor(image, grayImage, Emgu.CV.CvEnum.ColorConversion.Bgr2Gray);
+
+        // 遍历每一个像素点
+        Image<Gray, byte> img = grayImage.ToImage<Gray, byte>();
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                Gray pixel = img[y, x];
+                if (pixel.Intensity > 0)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     #endregion
