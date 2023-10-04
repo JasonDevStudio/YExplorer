@@ -16,6 +16,12 @@ using Newtonsoft.Json;
 using Serilog;
 using YExplorer;
 using YExplorer.Models;
+using SixLabors.ImageSharp.Formats.Png;
+using System;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace YExplorer.ViewModels;
 
@@ -1034,14 +1040,15 @@ public partial class MainViewModel : ObservableObject
 
                 foreach (var time in times)
                 {
-                    var picName = $"{Guid.NewGuid()}.png";
+                    var picName = $"{Guid.NewGuid()}.jpg";
                     var snapshot = Path.Combine(datapath, picName);
                     images.Add(snapshot);
 
                     mediaPlayer.Time = time; // 设置播放时间
                     await Task.Delay(200); // 等待截图完成
-                    mediaPlayer.TakeSnapshot(0, snapshot, 1920, 1080); // 截图
+                    mediaPlayer.TakeSnapshot(0, snapshot, 0, height: 0); // 截图
                     await Task.Delay(500); // 等待截图完成
+                    CompressAsPng(snapshot);
                 }
 
                 VideoEntry.Snapshots = new ObservableCollection<string>(images);
@@ -1136,7 +1143,7 @@ public partial class MainViewModel : ObservableObject
 
             foreach (var time in times)
             {
-                var picName = $"{Guid.NewGuid()}.png";
+                var picName = $"{Guid.NewGuid()}.jpg";
                 var snapshot = Path.Combine(datapath, picName);
                 images.Add(snapshot);
 
@@ -1144,6 +1151,7 @@ public partial class MainViewModel : ObservableObject
                 await Task.Delay(200);// 等待截图完成
                 mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
                 await Task.Delay(500);
+                CompressAsPng(snapshot);
             }
 
             this.DeleteVideoImages(enty);
@@ -1298,6 +1306,32 @@ public partial class MainViewModel : ObservableObject
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 无损压缩图片并保存为PNG格式
+    /// </summary>
+    /// <param name="inputPath">输入图片的路径</param>
+    private void CompressAsPng(string inputPath)
+    {
+        // 加载原始图片
+        // Load the original image
+        using (var image = SixLabors.ImageSharp.Image.Load(inputPath))
+        {
+            // 设置PNG编码器选项
+            // Set PNG encoder options
+            var options = new JpegEncoder()
+            {
+                Quality = 90
+            };
+
+            if (File.Exists(inputPath))
+                File.Delete(inputPath);
+
+            // 保存为PNG格式
+            // Save as PNG format
+            image.Save(inputPath, options);
+        }
     }
 
     #endregion
