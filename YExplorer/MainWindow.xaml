@@ -8,7 +8,7 @@
         mc:Ignorable="d"  
         FontFamily="Microsoft YaHei UI Light"
         xmlns:i="http://schemas.microsoft.com/xaml/behaviors"     
-        Title="YExplorer" Height="auto" Width="1500">
+        Title="YExplorer" Height="auto" Width="1600">
     <Window.DataContext>
         <local:MainViewModel />
     </Window.DataContext>
@@ -31,7 +31,7 @@
         </Style>
         <Style TargetType="Button" BasedOn="{StaticResource ButtonPrimary}" x:Key="MyButton">
             <Setter Property="Height" Value="35"></Setter>
-            <Setter Property="Width" Value="200"></Setter>
+            <Setter Property="Width" Value="100"></Setter>
             <Setter Property="FontSize" Value="15"></Setter>
             <Setter Property="Margin" Value="5"></Setter>
         </Style>
@@ -52,15 +52,15 @@
             <Setter Property="HorizontalContentAlignment" Value="Left"></Setter>
             <Setter Property="HorizontalAlignment" Value="Left"></Setter>
         </Style>
-    </Window.Resources> 
-        <Grid x:Name="MainPanel">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
+    </Window.Resources>
+    <Grid x:Name="MainPanel">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
         <ToolBarTray VerticalAlignment="Center" Grid.Row="0" Background="#363636">
             <ToolBar Margin="0,0,4,4" Band="1" Background="#363636">
-                    <ComboBox Margin="10,0,0,0" 
+                <ComboBox Margin="10,0,0,0" 
                   ItemsSource="{Binding DirPaths}"
                   SelectedItem="{Binding SelectedDir,Mode=TwoWay}"
                   IsEditable="False"
@@ -73,14 +73,14 @@
                  MinWidth="50"
                  Style="{StaticResource MyComboBox}" />
                 <Button Width="50" Content="加载" ToolTip="懒加载" Command="{Binding LoadDirCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="全载" ToolTip="全部加载" Command="{Binding LoadAllDirsCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="保存" ToolTip="保存数据" Command="{Binding SaveDataCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="处理" ToolTip="视频处理" Command="{Binding ProcessVideosCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="清源" ToolTip="清理原始目录" Command="{Binding DeleteOriginalCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="日志" ToolTip="打开日志目录" Command="{Binding OpenLogDirCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="数据" ToolTip="打开数据目录" Command="{Binding OpenDataDirCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearInvalidDataDirCommand}" Style="{StaticResource MyButton}"></Button>
-                    <Button Width="50" Content="删除" ToolTip="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="全载" ToolTip="全部加载" Command="{Binding LoadAllDirsCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="保存" ToolTip="保存数据" Command="{Binding SaveDataCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="处理" ToolTip="视频处理" Command="{Binding ProcessVideosCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="清源" ToolTip="清理原始目录" Command="{Binding DeleteOriginalCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="日志" ToolTip="打开日志目录" Command="{Binding OpenLogDirCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="数据" ToolTip="打开数据目录" Command="{Binding OpenDataDirCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearInvalidDataDirCommand}" Style="{StaticResource MyButton}"></Button>
+                <Button Width="50" Content="删除" ToolTip="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" Style="{StaticResource MyButton}"></Button>
                 <hc:SplitButton Content="排序" 
                                 Style="{StaticResource SplitButtonPrimary}"
                                 Command="{Binding OrderCommand}" 
@@ -91,113 +91,113 @@
                                 HorizontalAlignment="Stretch">
                     <hc:SplitButton.DropDownContent>
                         <StackPanel>
-                            <MenuItem Header="评价" Command="{Binding OrderCommand}" CommandParameter="0"/>
+                            <MenuItem Header="评价降序" Command="{Binding OrderCommand}" CommandParameter="0"/>
+                            <MenuItem Header="评价升序" Command="{Binding OrderCommand}" CommandParameter="5"/>
+                            <MenuItem Header="播放量降序" Command="{Binding OrderCommand}" CommandParameter="3"/>
+                            <MenuItem Header="播放量升序" Command="{Binding OrderCommand}" CommandParameter="4"/>
                             <MenuItem Header="时间降序" Command="{Binding OrderCommand}" CommandParameter="1"/>
                             <MenuItem Header="时间升序" Command="{Binding OrderCommand}" CommandParameter="2"/>
-                            <MenuItem Header="播放量" Command="{Binding OrderCommand}" CommandParameter="3"/>
                         </StackPanel>
                     </hc:SplitButton.DropDownContent>
-                </hc:SplitButton> 
+                </hc:SplitButton>
+                <hc:SplitButton Content="备份" 
+                ToolTip="备份数据"
+                Style="{StaticResource SplitButtonPrimary}"
+                Command="{Binding ZipDirectoryCommand}" 
+                Margin="5"
+                Height="35"
+                FontSize="15"
+                CommandParameter="zip"
+                HorizontalAlignment="Stretch">
+                    <hc:SplitButton.DropDownContent>
+                        <StackPanel>
+                            <MenuItem Header="还原" ToolTip="还原数据"  Command="{Binding ZipDirectoryCommand}" CommandParameter="unzip"/>
+                        </StackPanel>
+                    </hc:SplitButton.DropDownContent>
+                </hc:SplitButton>
             </ToolBar>
-            </ToolBarTray>
-            <!--<StackPanel Orientation="Horizontal" Height="40" Grid.Row="0" Style="{StaticResource MyStackPanel}">
-                <Label HorizontalAlignment="Left" VerticalAlignment="Center" Content="目录："></Label>
-                <ComboBox Style="{StaticResource MyComboBox}" hc:DropDownElement.ConsistentWidth="False" 
-                      ItemsSource="{Binding DirPaths}" 
-                      SelectedItem="{Binding SelectedDir,Mode=TwoWay}"
-                      IsEditable="False"
-                      MinWidth="700" Margin="5"></ComboBox>
-                <Button Width="50" Content="加载" ToolTip="懒加载" Command="{Binding LoadDirCommand}" Margin="5"></Button>
-                <Button Width="50" Content="全载" ToolTip="全部加载" Command="{Binding LoadAllDirsCommand}" Margin="5"></Button>
-                <Button Width="50" Content="保存" ToolTip="保存数据" Command="{Binding SaveDataCommand}" Margin="5"></Button>
-                <Button Width="50" Content="处理" ToolTip="视频处理" Command="{Binding ProcessVideosCommand}" Margin="5"></Button>
-                <Button Width="50" Content="清源" ToolTip="清理原始目录" Command="{Binding DeleteOriginalCommand}" Margin="5"></Button>
-                <Button Width="50" Content="日志" ToolTip="打开日志目录" Command="{Binding OpenLogDirCommand}" Margin="5"></Button>
-                <Button Width="50" Content="数据" ToolTip="打开数据目录" Command="{Binding OpenDataDirCommand}" Margin="5"></Button>
-                <Button Width="50" Content="清理" ToolTip="清理数据目录不再使用的图片资源" Command="{Binding ClearInvalidDataDirCommand}" Margin="5"></Button>
-                <Button Width="50" Content="删除" ToolTip="删除选中目录的数据目录" Command="{Binding ClearDataCommand}" Margin="5"></Button>
-            </StackPanel>-->
-            <StackPanel x:Name="ContentPanel" Grid.Row="1" Style="{StaticResource MyStackPanel}">
-                <hc:ScrollViewer VerticalScrollBarVisibility="Visible" 
+        </ToolBarTray>
+        <StackPanel x:Name="ContentPanel" Grid.Row="1" Style="{StaticResource MyStackPanel}">
+            <hc:ScrollViewer VerticalScrollBarVisibility="Visible" 
                           x:Name="scrollViewer" 
                           Height="{Binding ElementName=ContentPanel, Path=ActualHeight}"
                           Padding="10"
                           ScrollChanged="ScrollViewer_ScrollChanged">
-                    <ScrollViewer.Resources>
-                        <Style TargetType="{x:Type ScrollBar}">
-                            <Setter Property="Width" Value="100"/>
-                        </Style>
-                    </ScrollViewer.Resources>
-                    <ItemsControl ItemsSource="{Binding Videos}" x:Name="itemsControl">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <VirtualizingStackPanel VirtualizingPanel.IsVirtualizing="True"></VirtualizingStackPanel>
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Border Style="{StaticResource MyBorder}">
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
-                                        </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"></RowDefinition>
-                                            <RowDefinition Height="50"></RowDefinition>
-                                            <RowDefinition Height="Auto"></RowDefinition>
-                                            <RowDefinition Height="50"></RowDefinition>
-                                        </Grid.RowDefinitions>
-                                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,0,0">
-                                            <Label Content="{Binding Dir}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,10,0,0" >
-                                            <Label Content="{Binding Caption}"/>
-                                            <Label Content="==="/>
-                                            <Label Content="{Binding Length}"/>
-                                            <Label Content="MB"/>
-                                            <Label Content="==="/>
-                                            <Label Content="{Binding MidifyTime}"/>
-                                            <Label Content="==="/>
-                                            <hc:Rate Value="{Binding Evaluate, Mode=TwoWay}" Count="5" Margin="0,6,0,0" Foreground="{DynamicResource DangerBrush}"/>
-                                        </StackPanel>
-                                        <ListBox Grid.Row="2" Grid.ColumnSpan="6" 
+                <ScrollViewer.Resources>
+                    <Style TargetType="{x:Type ScrollBar}">
+                        <Setter Property="Width" Value="100"/>
+                    </Style>
+                </ScrollViewer.Resources>
+                <ItemsControl ItemsSource="{Binding Videos}" x:Name="itemsControl">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <VirtualizingStackPanel VirtualizingPanel.IsVirtualizing="True"></VirtualizingStackPanel>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource MyBorder}">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                        <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"></RowDefinition>
+                                        <RowDefinition Height="35"></RowDefinition>
+                                        <RowDefinition Height="Auto"></RowDefinition>
+                                        <RowDefinition Height="40"></RowDefinition>
+                                    </Grid.RowDefinitions>
+                                    <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,0,0">
+                                        <hc:Rate Value="{Binding Evaluate, Mode=TwoWay}" Count="5" Margin="0,6,0,0" Foreground="{DynamicResource DangerBrush}"/>
+                                        <Label Content="==="/>
+                                        <Label Content="{Binding Dir}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,10,0" >
+                                        <Label Content="{Binding Caption}"/>
+                                        <Label Content="==="/>
+                                        <Label Content="{Binding Length}"/>
+                                        <Label Content="MB"/>
+                                        <Label Content="==="/>
+                                        <Label Content="{Binding MidifyTime}"/>
+                                    </StackPanel>
+                                    <ListBox Grid.Row="2" Grid.ColumnSpan="6" 
                                              ItemsSource="{Binding Snapshots}" 
                                              Width="{Binding ActualWidth, ElementName=itemsControl}"
                                              HorizontalContentAlignment="Left" 
                                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                              PreviewMouseWheel="ListBox_PreviewMouseWheel">
-                                            <ListBox.ItemsPanel>
-                                                <ItemsPanelTemplate>
-                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" />
-                                                </ItemsPanelTemplate>
-                                            </ListBox.ItemsPanel>
-                                            <ListBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <Image Source="{Binding}" Style="{StaticResource MyImage}" >
-                                                        <Image.ToolTip>
-                                                            <ToolTip>
-                                                                <StackPanel>
-                                                                    <TextBlock Text="{Binding}" Style="{StaticResource DefaultTextBlock}" />
-                                                                    <Image Source="{Binding}"/>
-                                                                </StackPanel>
-                                                            </ToolTip>
-                                                        </Image.ToolTip>
-                                                    </Image>
-                                                </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                        </ListBox>
-                                        <StackPanel Grid.Row="3" Orientation="Horizontal">
-                                            <hc:Badge Value="{Binding PlayCount}" BadgeMargin="0,0,0,0" Style="{StaticResource BadgePrimary}">
-                                                <Button Content="Play" 
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" />
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Image Source="{Binding}" Style="{StaticResource MyImage}" >
+                                                    <Image.ToolTip>
+                                                        <ToolTip>
+                                                            <StackPanel>
+                                                                <TextBlock Text="{Binding}" Style="{StaticResource DefaultTextBlock}" />
+                                                                <Image Source="{Binding}"/>
+                                                            </StackPanel>
+                                                        </ToolTip>
+                                                    </Image.ToolTip>
+                                                </Image>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                    <StackPanel Grid.Row="3" Orientation="Horizontal">
+                                        <hc:Badge Value="{Binding PlayCount}" BadgeMargin="0,0,0,0" Style="{StaticResource BadgePrimary}">
+                                            <Button Content="Play" 
                                                         Style="{StaticResource MyButton}"
                                                         Command="{Binding Path=DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}" 
                                                         CommandParameter="{Binding VideoPath}" />
-                                            </hc:Badge>
+                                        </hc:Badge>
                                         <Button Content="Folder" Style="{StaticResource MyButton}"
                                     Command="{Binding Path=DataContext.FolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding VideoPath}" />
@@ -210,13 +210,13 @@
                                         <Button Content="Reset" Style="{StaticResource MyButton}"
                                     Command="{Binding Path=DataContext.ResetVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </hc:ScrollViewer>
-            </StackPanel>
-        </Grid> 
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </hc:ScrollViewer>
+        </StackPanel>
+    </Grid>
 </hc:Window>

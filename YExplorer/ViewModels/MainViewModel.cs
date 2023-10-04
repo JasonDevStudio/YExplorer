@@ -39,6 +39,7 @@ public partial class MainViewModel : ObservableObject
         this.dataPath = AppSettingsUtils.Default.WinDataPath;
         this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
         this.taskCount = AppSettingsUtils.Default.TaskCount;
+        VideoEntry.SaveCmd = this.SaveDataCommand;
     }
 
     #region Static
@@ -124,6 +125,16 @@ public partial class MainViewModel : ObservableObject
     /// 是否全量加载
     /// </summary>
     private bool isAllLoad = false;
+
+    /// <summary>
+    /// 文件选择器
+    /// </summary>
+    private FileDialog fileDialog = new OpenFileDialog()
+    {
+        DefaultExt = ".7z",
+        InitialDirectory = @"X:\10_Backup",
+        Filter = "7z files (*.7z)|*.7z|All files (*.*)|*.*",
+    };
 
     #endregion
 
@@ -238,7 +249,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var videoFiles = new List<FileInfo>();
-            var tmpDics = this.allVideos.DistinctBy(m=>m.VideoPath)?.ToDictionary(mm => mm.VideoPath) ?? new();
+            var tmpDics = this.allVideos.DistinctBy(m => m.VideoPath)?.ToDictionary(mm => mm.VideoPath) ?? new();
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.dicVideos = new ConcurrentDictionary<string, VideoEntry>(tmpDics);
 
@@ -250,7 +261,7 @@ public partial class MainViewModel : ObservableObject
 
             Log.Information($"Filterd videos count {files.Count}");
 
-            await this.ProcessVideosAsync(files, this.taskCount);
+            await this.ProcessVideosAsync(files, this.TaskCount);
 
             this.LoadNextItem(this.loadCount);
 
@@ -473,11 +484,17 @@ public partial class MainViewModel : ObservableObject
                     this.allVideos = this.allVideos.OrderByDescending(m => m.MidifyTime).ToList();
                     break;
                 case "3":
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ToList();
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenByDescending(m => m.MidifyTime).ToList();
+                    break;
+                case "4":
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenBy(m => m.MidifyTime).ToList();
+                    break;
+                case "5":
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenBy(m => m.MidifyTime).ToList();
                     break;
                 case "0":
                 default:
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ToList();
+                    this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.MidifyTime).ToList();
                     break;
             }
 
@@ -654,10 +671,40 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    #endregion
-    #endregion
+    /// <summary>
+    /// 备份/还原 数据目录
+    /// </summary>
+    /// <param name="args">参数</param>
+    /// <returns>Task</returns>
+    [RelayCommand]
+    public async Task ZipDirectoryAsync(string args)
+    {
+        switch (args)
+        {
+            case "unzip":
+                var dialogResult = fileDialog.ShowDialog();
+                if (dialogResult == DialogResult.OK)
+                {
+                    var zipFile = fileDialog.FileName;
+                    var dirInfo = new DirectoryInfo(AppSettingsUtils.Default.WinDataPath);
 
-    #region Private
+                    if (dirInfo.Exists)
+                        dirInfo.Delete(true);
+
+                    dirInfo.Create();
+
+                    await Task.Run(() => this.UnzipWith7Zip(zipFile, dirInfo.FullName));
+                    Growl.Success("恢复完成");
+                }
+                break;
+            case "zip":
+                var zipPath = Path.Combine(AppSettingsUtils.Default.BackupPath, $"data_{DateTime.Now:yyyy_MM_dd_HH_mm}.7z");
+                await Task.Run(() => this.ZipDirectoryWith7Zip(AppSettingsUtils.Default.WinDataPath, zipPath));
+                break;
+            default:
+                break;
+        }
+    }
 
     /// <summary>
     /// 保存视频实体的集合到一个JSON文件中。
@@ -667,7 +714,7 @@ public partial class MainViewModel : ObservableObject
     /// 然后，它检查数据路径是否存在，如果不存在则创建它。最后，如果目标 JSON 文件已经存在，它会先删除该文件，然后将 JSON 字符串写入新的文件中。
     /// </remarks>
     [RelayCommand]
-    private async Task SaveDataAsync()
+    public async Task SaveDataAsync()
     {
         var (datapath, jsonfile, name) = this.GetDataDirPath();
 
@@ -683,7 +730,14 @@ public partial class MainViewModel : ObservableObject
             File.Delete(jsonfile);
 
         await File.WriteAllTextAsync(jsonfile, json);
+
+        Growl.Info("保存完成");
     }
+
+    #endregion
+    #endregion
+
+    #region Private
 
     /// <summary>
     /// 异步加载指定目录下的视频实体列表。
@@ -710,25 +764,31 @@ public partial class MainViewModel : ObservableObject
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
                 var _videos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                _videos = _videos.OrderByDescending(x => x.MidifyTime).ToList();
+                _videos = _videos?.OrderByDescending(x => x.MidifyTime ?? DateTime.MaxValue).ToList();
 
-                foreach (var video in _videos)
+                if (_videos?.Any() ?? false)
                 {
-                    if (video.Snapshots?.Any() ?? false)
+                    foreach (var video in _videos)
                     {
-                        var notExistsCount = video.Snapshots.Count(m => !File.Exists(m));
-                        if (notExistsCount < video.Snapshots.Count / 3)
+                        if (video.Snapshots?.Any() ?? false)
                         {
-                            this.allVideos?.Add(video);
+                            var notExistsCount = video.Snapshots.Count(m => !File.Exists(m) || IsImageBlack(m));
+                            if (notExistsCount < video.Snapshots.Count / 3)
+                            {
+                                this.allVideos?.Add(video);
+                            }
                         }
                     }
                 }
             }
 
-            foreach (var item in this.allVideos)
+            if (this.allVideos?.Any() ?? false)
             {
-                item.Dir = Path.GetDirectoryName(item.VideoPath);
-                item.Dir = item.Dir.Replace(this.SelectedDir, string.Empty).Trim('\\');
+                foreach (var item in this.allVideos)
+                {
+                    item.Dir = Path.GetDirectoryName(item.VideoPath);
+                    item.Dir = item.Dir.Replace(this.SelectedDir, string.Empty).Trim('\\');
+                }
             }
         }
         catch (Exception ex)
@@ -979,8 +1039,9 @@ public partial class MainViewModel : ObservableObject
                     images.Add(snapshot);
 
                     mediaPlayer.Time = time; // 设置播放时间
+                    await Task.Delay(200); // 等待截图完成
+                    mediaPlayer.TakeSnapshot(0, snapshot, 1920, 1080); // 截图
                     await Task.Delay(500); // 等待截图完成
-                    mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
                 }
 
                 VideoEntry.Snapshots = new ObservableCollection<string>(images);
@@ -1062,7 +1123,7 @@ public partial class MainViewModel : ObservableObject
 
             mediaPlayer.Play();
             mediaPlayer.ToggleMute(); // 静音
-            await Task.Delay(500);
+            await Task.Delay(200);
 
             while (mediaPlayer.State != VLCState.Playing)
                 await Task.Delay(500);
@@ -1080,8 +1141,9 @@ public partial class MainViewModel : ObservableObject
                 images.Add(snapshot);
 
                 mediaPlayer.Time = time; // 设置播放时间
-                await Task.Delay(500);// 等待截图完成
-                mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图  
+                await Task.Delay(200);// 等待截图完成
+                mediaPlayer.TakeSnapshot(0, snapshot, 0, 0); // 截图
+                await Task.Delay(500);
             }
 
             this.DeleteVideoImages(enty);
@@ -1158,6 +1220,84 @@ public partial class MainViewModel : ObservableObject
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// 使用7z命令行工具压缩指定目录
+    /// </summary>
+    /// <param name="source">需要压缩的目录路径</param>
+    /// <param name="target">目标压缩文件路径</param>
+    /// <returns>如果成功返回true，否则返回false</returns>
+    private bool ZipDirectoryWith7Zip(string source, string target)
+    {
+        try
+        {
+            // 初始化一个新的ProcessStartInfo实例
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = "C:\\Program Files\\7-Zip\\7z.exe";  // 7z命令行工具的路径
+            startInfo.Arguments = $"a -t7z -mx9 \"{target}\" \"{source}\\*\"";  // 命令行参数
+            startInfo.WindowStyle = ProcessWindowStyle.Normal;  // 隐藏命令行窗口
+
+            // 启动外部进程
+            using (Process process = new Process())
+            {
+                process.StartInfo = startInfo;
+                process.Start();
+                process.WaitForExit();  // 等待进程完成
+
+                // 检查进程是否正常退出
+                if (process.ExitCode == 0)
+                {
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"{ex}");
+            Growl.Error("An error occurred: " + ex);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// 使用7z命令行工具解压指定压缩包到目标目录
+    /// </summary>
+    /// <param name="archivePath">压缩包路径</param>
+    /// <param name="targetDirectory">目标解压目录</param>
+    /// <returns>如果成功返回true，否则返回false</returns>
+    private bool UnzipWith7Zip(string archivePath, string targetDirectory)
+    {
+        try
+        {
+            // 初始化一个新的ProcessStartInfo实例
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = "C:\\Program Files\\7-Zip\\7z.exe";  // 7z命令行工具的路径
+            startInfo.Arguments = $"x \"{archivePath}\" -o\"{targetDirectory}\" -y";  // 命令行参数
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;  // 隐藏命令行窗口
+
+            // 启动外部进程
+            using (Process process = new Process())
+            {
+                process.StartInfo = startInfo;
+                process.Start();
+                process.WaitForExit();  // 等待进程完成
+
+                // 检查进程是否正常退出
+                if (process.ExitCode == 0)
+                {
+                    return true;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"{ex}");
+            Growl.Error("An error occurred: " + ex);
+        }
+
+        return false;
     }
 
     #endregion

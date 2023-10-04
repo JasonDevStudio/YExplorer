@@ -35,5 +35,10 @@ public class AppSettings
     /// 获取或设置是否启用多线程下载。
     /// </summary>
     public int TaskCount { get; set; } = 1;
+
+    /// <summary>
+    /// 备份目录
+    /// </summary>
+    public string BackupPath { get; set;}
 }
 

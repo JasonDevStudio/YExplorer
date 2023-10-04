@@ -1,5 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Newtonsoft.Json;
 
 namespace YExplorer.Models;
 
@@ -18,10 +20,17 @@ public partial class VideoEntry : ObservableObject
     private string videoDir;
     private int evaluate;
 
+    [JsonIgnore]
+    public static IAsyncRelayCommand SaveCmd { get; set; }
+
     public int Evaluate
     {
         get => this.evaluate;
-        set => this.SetProperty(ref this.evaluate, value);
+        set
+        {
+            this.SetProperty(ref this.evaluate, value);
+            SaveCmd?.ExecuteAsync(null);
+        }
     }
 
     public string Dir
@@ -72,7 +81,11 @@ public partial class VideoEntry : ObservableObject
     public long PlayCount
     {
         get => this.playCount;
-        set => this.SetProperty(ref this.playCount, value);
+        set
+        {
+            this.SetProperty(ref this.playCount, value);
+            SaveCmd?.ExecuteAsync(null);
+        }
     }
 
     /// <summary>
