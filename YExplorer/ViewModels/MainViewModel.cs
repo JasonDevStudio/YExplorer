@@ -251,7 +251,7 @@ public partial class MainViewModel : ObservableObject
         }
         finally
         {
-            this.isLoadData = true;
+            this.isLoadData = false;
         }
     }
 
