@@ -39,9 +39,12 @@ public partial class MainViewModel : ObservableObject
     /// </summary>
     public MainViewModel()
     {
-        var dirs = Directory.GetDirectories(@"\\192.168.10.2\99_资源收藏\01_成人资源");
-        var dirs1 = Directory.GetDirectories(@"\\192.168.10.2\98_资源收藏\01_成人资源");
-        this.DirPaths = new ObservableCollection<string>(dirs.Concat(dirs1));
+        var _dir_99 = new DirectoryInfo(@"\\192.168.10.2\99_资源收藏\01_成人资源");
+        var _dir_98 = new DirectoryInfo(@"\\192.168.10.2\98_资源收藏\01_成人资源");
+        var dirs_99 = _dir_99.GetDirectories(); 
+        var dirs_98 = _dir_98.GetDirectories();
+        var allDirs = dirs_99.Concat(dirs_98).OrderByDescending(m => m.CreationTime).Select(m => m.FullName);
+        this.DirPaths = new ObservableCollection<string>(allDirs);
         this.dataPath = AppSettingsUtils.Default.WinDataPath;
         this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
         this.taskCount = AppSettingsUtils.Default.TaskCount;
@@ -142,6 +145,8 @@ public partial class MainViewModel : ObservableObject
         Filter = "7z files (*.7z)|*.7z|All files (*.*)|*.*",
     };
 
+    private bool isLoadData = false;
+
     #endregion
 
     #region Property
@@ -192,6 +197,7 @@ public partial class MainViewModel : ObservableObject
             this.allVideos.Clear();
             this.loadCount = 1;
             this.isAllLoad = false;
+            this.isLoadData = true;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
 
@@ -204,6 +210,10 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.isLoadData = false;
         }
     }
 
@@ -224,6 +234,7 @@ public partial class MainViewModel : ObservableObject
             this.Videos.Clear();
             this.allVideos.Clear();
             this.loadCount = 50;
+            this.isLoadData = true;
             this.isAllLoad = true;
             var dirInfo = new DirectoryInfo(this.SelectedDir);
             this.allVideos = await this.LoadDirAsync(dirInfo);
@@ -237,6 +248,10 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.isLoadData = true;
         }
     }
 
@@ -722,12 +737,21 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     public async Task SaveDataAsync()
     {
+        if (isLoadData)
+            return;
+
         var (datapath, jsonfile, name) = this.GetDataDirPath();
 
         var json = string.Empty;
 
         if (this.allVideos?.Any() ?? false)
             json = JsonConvert.SerializeObject(this.allVideos, Formatting.Indented);
+
+        if(string.IsNullOrWhiteSpace(json))
+        {
+            Growl.Warning("没有数据需要保存");
+            return;
+        }
 
         if (!Directory.Exists(datapath))
             Directory.CreateDirectory(datapath);

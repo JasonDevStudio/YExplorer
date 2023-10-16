@@ -83,7 +83,7 @@ public partial class VideoEntry : ObservableObject
         get => this.playCount;
         set
         {
-            this.SetProperty(ref this.playCount, value);
+            this.SetProperty(ref this.playCount, value);             
             SaveCmd?.ExecuteAsync(null);
         }
     }

@@ -7,7 +7,7 @@
 		<UseWPF>true</UseWPF>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<PlatformTarget>AnyCPU</PlatformTarget>
-		<OutputPath>D:\100_Tools\01_YExplorer\bin</OutputPath>
+		<!--<OutputPath>D:\100_Tools\01_YExplorer\bin</OutputPath>-->
 		<Platforms>AnyCPU;x64</Platforms>
 		<ApplicationIcon>favicon.ico</ApplicationIcon>
 	</PropertyGroup>
