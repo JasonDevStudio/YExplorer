@@ -635,12 +635,18 @@ public partial class MainViewModel : ObservableObject
         {
             if (param is VideoEntry video)
             {
+                var dirName = Path.GetDirectoryName(video.VideoPath);
+
+                if (this.SelectedDir == dirName)
+                {
+                    Growl.Warning($"根目录不允许直接删除文件夹");
+                    return;
+                }
+
                 var result = HandyControl.Controls.MessageBox.Show($"Are you sure you want to delete the folder {video.VideoPath}?", caption: "Question", MessageBoxButton.OKCancel);
 
                 if (result == MessageBoxResult.Cancel)
                     return;
-
-                var dirName = Path.GetDirectoryName(video.VideoPath);
 
                 var videos = this.Videos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
                 foreach (var item in videos)
@@ -794,7 +800,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
                 var _videos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                _videos = _videos?.OrderByDescending(x => x.MidifyTime ?? DateTime.MaxValue).ToList();
+                _videos = _videos?.OrderByDescending(x=>x.Evaluate).ThenByDescending(x => x.MidifyTime ?? DateTime.MaxValue).ToList();
 
                 if (_videos?.Any() ?? false)
                 {
