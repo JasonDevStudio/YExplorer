@@ -41,7 +41,7 @@ public partial class MainViewModel : ObservableObject
     {
         var _dir_99 = new DirectoryInfo(@"\\192.168.10.2\99_资源收藏\01_成人资源");
         var _dir_98 = new DirectoryInfo(@"\\192.168.10.2\98_资源收藏\01_成人资源");
-        var dirs_99 = _dir_99.GetDirectories(); 
+        var dirs_99 = _dir_99.GetDirectories();
         var dirs_98 = _dir_98.GetDirectories();
         var allDirs = dirs_99.Concat(dirs_98).OrderByDescending(m => m.CreationTime).Select(m => m.FullName);
         this.DirPaths = new ObservableCollection<string>(allDirs);
@@ -175,6 +175,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<VideoEntry> videos = new();
 
+    /// <summary>
+    /// 是否忙碌
+    /// </summary>
+    [ObservableProperty]
+    private bool isBusy = false;
+
     #endregion
 
     #region API
@@ -193,6 +199,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = true;
             this.Videos.Clear();
             this.allVideos.Clear();
             this.loadCount = 1;
@@ -214,6 +221,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.isLoadData = false;
+            this.IsBusy = false;
         }
     }
 
@@ -231,13 +239,17 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = true;
             this.Videos.Clear();
             this.allVideos.Clear();
             this.loadCount = 50;
             this.isLoadData = true;
             this.isAllLoad = true;
-            var dirInfo = new DirectoryInfo(this.SelectedDir);
-            this.allVideos = await this.LoadDirAsync(dirInfo);
+            await Task.Run(async () =>
+            {
+                var dirInfo = new DirectoryInfo(this.SelectedDir);
+                this.allVideos = await this.LoadDirAsync(dirInfo);
+            });
 
             if (this.allVideos?.Any() ?? false)
                 this.LoadNextItem(this.allVideos.Count);
@@ -252,6 +264,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.isLoadData = false;
+            this.IsBusy = false;
         }
     }
 
@@ -310,9 +323,15 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            var uri = this.SelectedDir;
-            var dirInfo = new DirectoryInfo(uri);
-            DeleteOriginalDir(dirInfo);
+            this.IsBusy = true;
+
+            await Task.Run(() =>
+            {
+                var uri = this.SelectedDir;
+                var dirInfo = new DirectoryInfo(uri);
+                DeleteOriginalDir(dirInfo);
+            });
+
             Growl.Success("清理原始目录完成。");
             await Task.CompletedTask;
         }
@@ -320,6 +339,10 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = false;
         }
     }
 
@@ -379,51 +402,56 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = true;
             var delCount = 0;
-            var dirInfo = new DirectoryInfo(GetDataDirPath().dir);
-            var dataConf = this.GetDataDirPath();
-            var dataDirPath = dataConf.dir;
-            var dicFiles = new Dictionary<string, VideoEntry>();
-            var dataDir = new DirectoryInfo(dataDirPath);
-
-            if (this.Videos?.Any() ?? false)
+            var _videos = this.Videos?.ToList();
+            await Task.Run(() =>
             {
-                foreach (var item in this.Videos)
+                var dirInfo = new DirectoryInfo(GetDataDirPath().dir);
+                var dataConf = this.GetDataDirPath();
+                var dataDirPath = dataConf.dir;
+                var dicFiles = new Dictionary<string, VideoEntry>();
+                var dataDir = new DirectoryInfo(dataDirPath);
+
+                if (_videos?.Any() ?? false)
                 {
-                    foreach (var path in item.Snapshots)
+                    foreach (var item in this.Videos)
                     {
-                        dicFiles.Add(path, item);
-                    }
-                }
-            }
-
-            if (dataDir.Exists)
-            {
-                var files = dataDir.GetFiles("*.png");
-                var length = files.Length;
-
-                if (files?.Any() ?? false)
-                {
-                    for (int i = length - 1; i >= 0; i--)
-                    {
-                        var file = files[i];
-
-                        if (!dicFiles.ContainsKey(file.FullName))
+                        foreach (var path in item.Snapshots)
                         {
-                            try
-                            {
-                                file.Delete();
-                                delCount++;
-                            }
-                            catch (Exception)
-                            {
-                                Log.Warning($"Del Error : {file.FullName}");
-                            }
+                            dicFiles.Add(path, item);
                         }
                     }
                 }
 
-            }
+                if (dataDir.Exists)
+                {
+                    var files = dataDir.GetFiles("*.png");
+                    var length = files.Length;
+
+                    if (files?.Any() ?? false)
+                    {
+                        for (int i = length - 1; i >= 0; i--)
+                        {
+                            var file = files[i];
+
+                            if (!dicFiles.ContainsKey(file.FullName))
+                            {
+                                try
+                                {
+                                    file.Delete();
+                                    delCount++;
+                                }
+                                catch (Exception)
+                                {
+                                    Log.Warning($"Del Error : {file.FullName}");
+                                }
+                            }
+                        }
+                    }
+
+                }
+            });
 
             Growl.Success($"清理数据资源完成, 清理文件 {delCount} 个。");
         }
@@ -431,6 +459,10 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = false;
         }
     }
 
@@ -445,17 +477,23 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = true;
             var delCount = 0;
-            this.allVideos.Clear();
             this.Videos.Clear();
-            var dataConf = this.GetDataDirPath();
-            var dataDirPath = dataConf.dir;
-            var dataDir = new DirectoryInfo(dataDirPath);
 
-            if (dataDir.Exists)
+            await Task.Run(() =>
             {
-                dataDir.Delete(true);
-            }
+                this.allVideos.Clear();
+
+                var dataConf = this.GetDataDirPath();
+                var dataDirPath = dataConf.dir;
+                var dataDir = new DirectoryInfo(dataDirPath);
+
+                if (dataDir.Exists)
+                {
+                    dataDir.Delete(true);
+                }
+            });
 
             Growl.Success($"清理数据资源完成.");
         }
@@ -463,6 +501,10 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = true;
         }
     }
 
@@ -496,28 +538,33 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            switch (args)
+            this.IsBusy = true;
+
+            await Task.Run(() =>
             {
-                case "1":
-                    this.allVideos = this.allVideos.OrderBy(m => m.MidifyTime).ToList();
-                    break;
-                case "2":
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.MidifyTime).ToList();
-                    break;
-                case "3":
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenByDescending(m => m.MidifyTime).ToList();
-                    break;
-                case "4":
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenBy(m => m.MidifyTime).ToList();
-                    break;
-                case "5":
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenBy(m => m.MidifyTime).ToList();
-                    break;
-                case "0":
-                default:
-                    this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.MidifyTime).ToList();
-                    break;
-            }
+                switch (args)
+                {
+                    case "1":
+                        this.allVideos = this.allVideos.OrderBy(m => m.MidifyTime).ToList();
+                        break;
+                    case "2":
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.MidifyTime).ToList();
+                        break;
+                    case "3":
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenByDescending(m => m.MidifyTime).ToList();
+                        break;
+                    case "4":
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenBy(m => m.MidifyTime).ToList();
+                        break;
+                    case "5":
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenBy(m => m.MidifyTime).ToList();
+                        break;
+                    case "0":
+                    default:
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.MidifyTime).ToList();
+                        break;
+                }
+            });
 
             this.Videos.Clear();
 
@@ -532,6 +579,10 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = false;
         }
     }
 
@@ -602,20 +653,29 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = true;
             if (param is VideoEntry video)
             {
-                if (File.Exists(video.VideoPath))
-                    File.Delete(video.VideoPath);
+                await Task.Run(async () =>
+                {
+                    if (File.Exists(video.VideoPath))
+                        File.Delete(video.VideoPath);
+
+                    this.allVideos.Remove(video);
+                    await this.SaveDataAsync();
+                });
 
                 this.Videos.Remove(video);
-                this.allVideos.Remove(video);
-                await this.SaveDataAsync();
             }
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = false;
         }
     }
 
@@ -746,28 +806,51 @@ public partial class MainViewModel : ObservableObject
         if (isLoadData)
             return;
 
-        var (datapath, jsonfile, name) = this.GetDataDirPath();
+        (bool success, string msg) = (false, string.Empty);
 
-        var json = string.Empty;
-
-        if (this.allVideos?.Any() ?? false)
-            json = JsonConvert.SerializeObject(this.allVideos, Formatting.Indented);
-
-        if(string.IsNullOrWhiteSpace(json))
+        try
         {
-            Growl.Warning("没有数据需要保存");
-            return;
+            this.IsBusy = true;
+            var (datapath, jsonfile, name) = this.GetDataDirPath();
+            var json = string.Empty;
+
+            if (this.allVideos?.Any() ?? false)
+                json = JsonConvert.SerializeObject(this.allVideos, Formatting.Indented);
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                success = false;
+                msg = "没有数据需要保存";
+            }
+            else
+            {
+                if (!Directory.Exists(datapath))
+                    Directory.CreateDirectory(datapath);
+
+                if (File.Exists(jsonfile))
+                    File.Delete(jsonfile);
+
+                if (success)
+                    await File.WriteAllTextAsync(jsonfile, json);
+
+                success = true;
+                msg = "保存完成";
+            }
+        }
+        catch (Exception ex)
+        {
+            Growl.Error(ex.ToString());
+        }
+        finally
+        {
+            this.IsBusy = false;
         }
 
-        if (!Directory.Exists(datapath))
-            Directory.CreateDirectory(datapath);
 
-        if (File.Exists(jsonfile))
-            File.Delete(jsonfile);
-
-        await File.WriteAllTextAsync(jsonfile, json);
-
-        Growl.Info("保存完成");
+        if (success)
+            Growl.Success(msg);
+        else
+            Growl.Warning(msg); 
     }
 
     #endregion
@@ -800,7 +883,7 @@ public partial class MainViewModel : ObservableObject
             {
                 var json = await File.ReadAllTextAsync(jsonfile);
                 var _videos = JsonConvert.DeserializeObject<List<VideoEntry>>(json);
-                _videos = _videos?.OrderByDescending(x=>x.Evaluate).ThenByDescending(x => x.MidifyTime ?? DateTime.MaxValue).ToList();
+                _videos = _videos?.OrderByDescending(x => x.Evaluate).ThenByDescending(x => x.MidifyTime ?? DateTime.MaxValue).ToList();
 
                 if (_videos?.Any() ?? false)
                 {

@@ -29,7 +29,7 @@ public partial class VideoEntry : ObservableObject
         set
         {
             this.SetProperty(ref this.evaluate, value);
-            SaveCmd?.ExecuteAsync(null);
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(() => SaveCmd?.ExecuteAsync(null));
         }
     }
 
@@ -83,8 +83,8 @@ public partial class VideoEntry : ObservableObject
         get => this.playCount;
         set
         {
-            this.SetProperty(ref this.playCount, value);             
-            SaveCmd?.ExecuteAsync(null);
+            this.SetProperty(ref this.playCount, value);
+            System.Windows.Application.Current.Dispatcher.InvokeAsync(() => SaveCmd?.ExecuteAsync(null));
         }
     }
 
