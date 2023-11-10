@@ -806,7 +806,7 @@ public partial class MainViewModel : ObservableObject
         if (isLoadData)
             return;
 
-        (bool success, string msg) = (false, string.Empty);
+        (bool success, string msg) = (true, string.Empty);
 
         try
         {
