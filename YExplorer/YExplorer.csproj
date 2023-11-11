@@ -41,7 +41,6 @@
 	<ItemGroup>
 		<PackageReference Include="BusyIndicator" Version="2.0.2.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1" />
-		<PackageReference Include="DevExpress.Wpf.Core" Version="23.1.5" />
 		<PackageReference Include="Emgu.CV" Version="4.8.0.5324" />
 		<PackageReference Include="Emgu.CV.runtime.windows" Version="4.8.0.5324" />
 		<PackageReference Include="HandyControl" Version="3.4.0" />

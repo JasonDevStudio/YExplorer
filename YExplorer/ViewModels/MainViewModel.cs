@@ -1,27 +1,20 @@
-﻿using System.Collections;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Emgu.CV;
+using Emgu.CV.Structure;
+using HandyControl.Controls;
+using LibVLCSharp.Shared;
+using Microsoft.Win32;
+using Newtonsoft.Json;
+using Serilog;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Windows;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using DevExpress.Pdf.Native;
-using Emgu.CV.Structure;
-using Emgu.CV;
-using HandyControl.Controls;
-using LibVLCSharp.Shared;
-using Newtonsoft.Json;
-using Serilog;
-using YExplorer;
 using YExplorer.Models;
-using SixLabors.ImageSharp.Formats.Png;
-using System;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Formats.Jpeg;
 
 namespace YExplorer.ViewModels;
 
@@ -770,7 +763,7 @@ public partial class MainViewModel : ObservableObject
         {
             case "unzip":
                 var dialogResult = fileDialog.ShowDialog();
-                if (dialogResult == DialogResult.OK)
+                if (dialogResult == true)
                 {
                     var zipFile = fileDialog.FileName;
                     var dirInfo = new DirectoryInfo(AppSettingsUtils.Default.WinDataPath);
@@ -809,8 +802,7 @@ public partial class MainViewModel : ObservableObject
         (bool success, string msg) = (true, string.Empty);
 
         try
-        {
-            this.IsBusy = true;
+        { 
             var (datapath, jsonfile, name) = this.GetDataDirPath();
             var json = string.Empty;
 
@@ -840,17 +832,12 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Growl.Error(ex.ToString());
-        }
-        finally
-        {
-            this.IsBusy = false;
-        }
-
-
+        } 
+         
         if (success)
             Growl.Success(msg);
         else
-            Growl.Warning(msg); 
+            Growl.Warning(msg);
     }
 
     #endregion
