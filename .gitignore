@@ -396,3 +396,4 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/YExplorer/.idea/.idea.YExplorer/.idea/indexLayout.xml
