@@ -1,0 +1,332 @@
+﻿<hc:Window x:Class="XExplorer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:XExplorer.ViewModels"
+        xmlns:hc="https://handyorg.github.io/handycontrol" 
+        xmlns:sys="clr-namespace:System;assembly=mscorlib" 
+        mc:Ignorable="d"  
+        FontFamily="Microsoft YaHei UI Light"
+        xmlns:i="http://schemas.microsoft.com/xaml/behaviors" 
+           xmlns:busyIndicator1="https://github.com/Peoky/BusyIndicator"
+           Title="XExplorer" Height="auto" Width="1600">
+    <Window.DataContext>
+        <local:MainViewModel />
+    </Window.DataContext>
+    <Window.Resources>
+        <Style TargetType="Border" x:Key="MyBorder">
+            <Setter Property="BorderBrush" Value="LightGray" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Margin" Value="5" />
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="Foreground" Value="White"></Setter>
+            <Setter Property="FontSize" Value="18"></Setter>
+        </Style>
+        <Style TargetType="StackPanel" x:Key="MyStackPanel">
+            <Setter Property="Background" Value="#363636"></Setter>
+        </Style>
+        <Style TargetType="Image" x:Key="MyImage">
+            <Setter Property="Height" Value="200"></Setter>
+            <Setter Property="Width" Value="250"></Setter>
+        </Style>
+        <Style TargetType="Button" BasedOn="{StaticResource ButtonPrimary}" x:Key="MyButton">
+            <Setter Property="Height" Value="35"></Setter>
+            <Setter Property="Width" Value="100"></Setter>
+            <Setter Property="FontSize" Value="15"></Setter>
+            <Setter Property="Margin" Value="5"></Setter>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="FontSize" Value="15"></Setter>
+            <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="DefaultTextBlock">
+            <Setter Property="FontSize" Value="18"></Setter>
+        </Style>
+        <Style TargetType="ComboBox" x:Key="MyComboBox" BasedOn="{StaticResource ComboBoxExtend}">
+            <Setter Property="FontSize" Value="15"></Setter>
+            <Setter Property="VerticalContentAlignment" Value="Center"></Setter>
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="#363636"/>
+            <Setter Property="Background" Value="#363636"></Setter>
+            <Setter Property="HorizontalContentAlignment" Value="Left"></Setter>
+            <Setter Property="HorizontalAlignment" Value="Left"></Setter>
+        </Style>
+        <sys:Double x:Key="IndicatorScaleX">0.5</sys:Double>
+        <sys:Double x:Key="IndicatorScaleY">0.5</sys:Double>
+        <LinearGradientBrush x:Key="IndicatorForeground" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Offset="0" Color="#FF56A1" />
+            <GradientStop Offset="1" Color="#FF9350" />
+        </LinearGradientBrush>
+    </Window.Resources>
+    <busyIndicator1:BusyMask 
+     x:Name="BusyIndicator"
+     BusyContent="Please wait..." 
+     IndicatorType="Grid"
+     IsBusy="{Binding IsBusy}"
+     Background="Transparent">
+        <Grid x:Name="MainPanel">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <ToolBarTray VerticalAlignment="Center" Grid.Row="0" Background="#363636">
+                <ToolBar Margin="0,0,4,4" Band="1" Background="#363636">
+                    <ComboBox Margin="10,0,0,0" 
+                  ItemsSource="{Binding DirPaths}"
+                  SelectedItem="{Binding SelectedDir,Mode=TwoWay}"
+                  IsEditable="False"
+                  MinWidth="700"
+                  Style="{StaticResource MyComboBox}" />
+                    <ComboBox Margin="10,0,0,0" 
+                 ItemsSource="{Binding TaskCounts}"
+                 SelectedItem="{Binding TaskCount,Mode=TwoWay}"
+                 IsEditable="False"
+                 MinWidth="50"
+                 Style="{StaticResource MyComboBox}" />
+                    <hc:SplitButton Content="全载" 
+                                    ToolTip="全部加载"
+                                    Style="{StaticResource SplitButtonPrimary}"
+                                    Command="{Binding LoadAllDirsCommand}" 
+                                    Margin="5"
+                                    Height="35"
+                                    FontSize="15"
+                                    HorizontalAlignment="Stretch">
+                        <hc:SplitButton.DropDownContent>
+                            <StackPanel>
+                                <MenuItem Header="加载" ToolTip="懒加载"  Command="{Binding LoadDirCommand}"/>
+                                <MenuItem Header="载图" ToolTip="加载图片"  Command="{Binding LoadPicCommand}"/>
+                            </StackPanel>
+                        </hc:SplitButton.DropDownContent>
+                    </hc:SplitButton>
+                    <hc:SplitButton Content="处理" 
+                                    ToolTip="视频处理"
+                                    Style="{StaticResource SplitButtonPrimary}"
+                                    Command="{Binding ProcessVideosCommand}" 
+                                    Margin="5"
+                                    Height="35"
+                                    FontSize="15"
+                                    HorizontalAlignment="Stretch">
+                        <hc:SplitButton.DropDownContent>
+                            <StackPanel>
+                                <MenuItem Header="保存" ToolTip="保存数据"  Command="{Binding SaveDataCommand}"/>
+                                <MenuItem Header="渲染" ToolTip="离屏渲染保存图片"  Command="{Binding SaveToImageCommand}"/>
+                            </StackPanel>
+                        </hc:SplitButton.DropDownContent>
+                    </hc:SplitButton>
+                    <hc:SplitButton Content="日志" 
+                ToolTip="打开日志目录"
+                Style="{StaticResource SplitButtonPrimary}"
+                Command="{Binding OpenLogDirCommand}" 
+                Margin="5"
+                Height="35"
+                FontSize="15"
+                HorizontalAlignment="Stretch">
+                        <hc:SplitButton.DropDownContent>
+                            <StackPanel>
+                                <MenuItem Header="清源" ToolTip="清理原始目录"  Command="{Binding DeleteOriginalCommand}"/>
+                                <MenuItem Header="清图" ToolTip="清理视频中无效(不存在)的图片"  Command="{Binding DeleteVideoNotExistsImagesCommand}"/>
+                                <MenuItem Header="数据" ToolTip="打开数据目录"  Command="{Binding OpenDataDirCommand}"/>
+                                <MenuItem Header="清理" ToolTip="清理数据目录不再使用的图片资源"  Command="{Binding ClearInvalidDataDirCommand}"/>
+                                <MenuItem Header="删除" ToolTip="删除选中目录的数据目录"  Command="{Binding ClearDataCommand}"/>
+                            </StackPanel>
+                        </hc:SplitButton.DropDownContent>
+                    </hc:SplitButton>
+                    <hc:SplitButton Content="排序" 
+                                Style="{StaticResource SplitButtonPrimary}"
+                                Command="{Binding OrderCommand}" 
+                                Margin="5"
+                                Height="35"
+                                FontSize="15"
+                                CommandParameter="0"
+                                HorizontalAlignment="Stretch">
+                        <hc:SplitButton.DropDownContent>
+                            <StackPanel>
+                                <MenuItem Header="评价降序" Command="{Binding OrderCommand}" CommandParameter="0"/>
+                                <MenuItem Header="评价升序" Command="{Binding OrderCommand}" CommandParameter="5"/>
+                                <MenuItem Header="播放量降序" Command="{Binding OrderCommand}" CommandParameter="3"/>
+                                <MenuItem Header="播放量升序" Command="{Binding OrderCommand}" CommandParameter="4"/>
+                                <MenuItem Header="时间降序" Command="{Binding OrderCommand}" CommandParameter="1"/>
+                                <MenuItem Header="时间升序" Command="{Binding OrderCommand}" CommandParameter="2"/>
+                            </StackPanel>
+                        </hc:SplitButton.DropDownContent>
+                    </hc:SplitButton>
+                    <hc:SplitButton Content="备份" 
+                ToolTip="备份数据"
+                Style="{StaticResource SplitButtonPrimary}"
+                Command="{Binding ZipDirectoryCommand}" 
+                Margin="5"
+                Height="35"
+                FontSize="15"
+                CommandParameter="zip"
+                HorizontalAlignment="Stretch">
+                        <hc:SplitButton.DropDownContent>
+                            <StackPanel>
+                                <MenuItem Header="还原" ToolTip="还原数据"  Command="{Binding ZipDirectoryCommand}" CommandParameter="unzip"/>
+                            </StackPanel>
+                        </hc:SplitButton.DropDownContent>
+                    </hc:SplitButton>
+                    <hc:SplitButton Content="置顶" 
+                                    ToolTip="返回顶部"
+                                    Style="{StaticResource SplitButtonPrimary}"
+                                    Command="{Binding ScrollToAsyncCommand}" 
+                                    Margin="5"
+                                    Height="35"
+                                    FontSize="15"
+                                    CommandParameter="top"
+                                    HorizontalAlignment="Stretch">
+                        <hc:SplitButton.DropDownContent>
+                            <StackPanel>
+                                <MenuItem Header="置底" ToolTip="跳转底部"  Command="{Binding ScrollToAsyncCommand}" CommandParameter="bottom"/>
+                            </StackPanel>
+                        </hc:SplitButton.DropDownContent>
+                    </hc:SplitButton>
+                </ToolBar>
+            </ToolBarTray>
+            <StackPanel x:Name="ContentPanel" Grid.Row="1" Style="{StaticResource MyStackPanel}">
+                <hc:ScrollViewer VerticalScrollBarVisibility="Visible" Visibility="{Binding VideoVisibility}"
+                          x:Name="scrollViewer" 
+                          Height="{Binding ElementName=ContentPanel, Path=ActualHeight}"
+                          Padding="10"
+                          ScrollChanged="ScrollViewer_ScrollChanged">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="{x:Type ScrollBar}">
+                            <Setter Property="Width" Value="100"/>
+                        </Style>
+                    </ScrollViewer.Resources>
+
+                    <ItemsControl ItemsSource="{Binding Videos}" x:Name="itemsControl">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <VirtualizingStackPanel VirtualizingPanel.IsVirtualizing="True"></VirtualizingStackPanel>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Style="{StaticResource MyBorder}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                            <ColumnDefinition Width="Auto"></ColumnDefinition>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"></RowDefinition>
+                                            <RowDefinition Height="35"></RowDefinition>
+                                            <RowDefinition Height="Auto"></RowDefinition>
+                                            <RowDefinition Height="40"></RowDefinition>
+                                        </Grid.RowDefinitions>
+                                        <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,0,0">
+                                            <hc:Rate Value="{Binding Evaluate, Mode=TwoWay}" Count="5" Margin="0,6,0,0" Foreground="{DynamicResource DangerBrush}"/>
+                                            <Label Content="==="/>
+                                            <Label Content="{Binding Dir}"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,10,0" >
+                                            <Label Content="{Binding Caption}"/>
+                                            <Label Content="==="/>
+                                            <Label Content="{Binding Length}"/>
+                                            <Label Content="MB"/>
+                                            <Label Content="==="/>
+                                            <Label Content="{Binding MidifyTime}"/>
+                                        </StackPanel>
+                                        <ListBox Grid.Row="2" Grid.ColumnSpan="6" 
+                                             ItemsSource="{Binding Snapshots}" 
+                                             Width="{Binding ActualWidth, ElementName=itemsControl}"
+                                             HorizontalContentAlignment="Left" 
+                                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                             PreviewMouseWheel="ListBox_PreviewMouseWheel">
+                                            <ListBox.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" />
+                                                </ItemsPanelTemplate>
+                                            </ListBox.ItemsPanel>
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Image Source="{Binding}" Style="{StaticResource MyImage}" >
+                                                        <Image.ToolTip>
+                                                            <ToolTip>
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding}" Style="{StaticResource DefaultTextBlock}" />
+                                                                    <Image Source="{Binding}"/>
+                                                                </StackPanel>
+                                                            </ToolTip>
+                                                        </Image.ToolTip>
+                                                    </Image>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                        <StackPanel Grid.Row="3" Orientation="Horizontal">
+                                            <hc:Badge Value="{Binding PlayCount}" BadgeMargin="0,0,0,0" Style="{StaticResource BadgePrimary}">
+                                                <Button Content="Play" 
+                                                        Style="{StaticResource MyButton}"
+                                                        Command="{Binding Path=DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}" 
+                                                        CommandParameter="{Binding VideoPath}" />
+                                            </hc:Badge>
+                                            <Button Content="Folder" Style="{StaticResource MyButton}"
+                                    Command="{Binding Path=DataContext.FolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding VideoPath}" />
+                                            <Button Content="Del" Style="{StaticResource MyButton}"
+                                    Command="{Binding Path=DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding }" />
+                                            <Button Content="Del folder" Style="{StaticResource MyButton}"
+                                    Command="{Binding Path=DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding }" />
+                                            <Button Content="Reset" Style="{StaticResource MyButton}"
+                                    Command="{Binding Path=DataContext.ResetVideoCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                    CommandParameter="{Binding }" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </hc:ScrollViewer>
+                <hc:ScrollViewer Visibility="{Binding PicVisibility}" VerticalScrollBarVisibility="Visible" 
+                                 x:Name="scrollViewerPic" ScrollChanged="PicScrollViewer_ScrollChanged"
+                                 Height="{Binding ElementName=ContentPanel, Path=ActualHeight}"
+                                 Padding="10">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="{x:Type ScrollBar}">
+                            <Setter Property="Width" Value="100"/>
+                        </Style>
+                    </ScrollViewer.Resources>
+                    <hc:CoverView Margin="27" ItemWidth="200" ItemHeight="200" ItemContentHeight="1440"  ItemsSource="{Binding Images}">
+                        <hc:CoverView.ItemHeaderTemplate>
+                            <DataTemplate>
+                                <Image Source="{Binding }" Stretch="Uniform">
+                                    <Image.ToolTip>
+                                        <ToolTip>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding}" Style="{StaticResource DefaultTextBlock}" />
+                                                <Image Source="{Binding}"/>
+                                            </StackPanel>
+                                        </ToolTip>
+                                    </Image.ToolTip>
+                                    <i:Interaction.Triggers>
+                                        <i:EventTrigger EventName="MouseRightButtonDown">
+                                            <i:InvokeCommandAction Command="{Binding DataContext.FolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}" 
+                                          PassEventArgsToCommand="True"
+                                          CommandParameter="{Binding }"/>
+                                        </i:EventTrigger>
+                                    </i:Interaction.Triggers>
+                                </Image>
+                            </DataTemplate>
+                        </hc:CoverView.ItemHeaderTemplate>
+                        <hc:CoverView.ItemTemplate>
+                            <DataTemplate>
+                                <Border Margin="10">
+                                    <Image Source="{Binding }" Stretch="Uniform"/>
+                                </Border>
+                            </DataTemplate>
+                        </hc:CoverView.ItemTemplate>
+                    </hc:CoverView>
+                </hc:ScrollViewer>
+            </StackPanel>
+        </Grid>
+    </busyIndicator1:BusyMask>
+</hc:Window>

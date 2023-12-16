@@ -5,6 +5,8 @@ VisualStudioVersion = 17.6.33815.320
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YExplorer", "YExplorer.csproj", "{5F6C3E0C-CC15-4AAF-8878-F805EE1240B3}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "XExplorer", "..\XExplorer\XExplorer.csproj", "{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,14 @@ Global
 		{5F6C3E0C-CC15-4AAF-8878-F805EE1240B3}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5F6C3E0C-CC15-4AAF-8878-F805EE1240B3}.Release|x64.ActiveCfg = Release|x64
 		{5F6C3E0C-CC15-4AAF-8878-F805EE1240B3}.Release|x64.Build.0 = Release|x64
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Debug|x64.ActiveCfg = Debug|x64
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Debug|x64.Build.0 = Debug|x64
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Release|x64.ActiveCfg = Release|x64
+		{479D0E0A-B439-47F8-A6E8-A7C3198A19A0}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
