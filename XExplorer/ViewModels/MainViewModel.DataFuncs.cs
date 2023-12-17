@@ -1,30 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using Emgu.CV;
-using Emgu.CV.Stitching;
-using Emgu.CV.Structure;
-using HandyControl.Controls;
-using LibVLCSharp.Shared;
-using Microsoft.Win32;
-using Newtonsoft.Json;
-using Serilog;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using System.Collections.Concurrent;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
+﻿using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media.Imaging;
-using System.Windows.Media;
-using XExplorer.Models;
+using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using XExplorer.DataAccess;
 using XExplorer.DataModels;
-using System.Net;
-using Microsoft.EntityFrameworkCore;
+using XExplorer.Models;
+using YExplorer.Models;
 
 namespace XExplorer.ViewModels;
 
@@ -46,32 +27,37 @@ partial class MainViewModel
     /// 从JSON数据转换为SQLite数据库中的Video对象列表。
     /// </summary>
     /// <returns>包含Video对象的列表。</returns>
-    private List<Video> Json2Sqlite()
+    private async Task<List<Video>> Json2SqliteAsync()
     {
         var dbpath = this.GetSqlitePath();
+        var jsonpath = this.GetDataDirPath();
         var videos = new List<Video>();
+        var json = await File.ReadAllTextAsync(jsonpath.file);
+        var jsonVideos = JsonConvert.DeserializeObject<List<VideoJsonEnty>>(json);
 
-        if (this.allVideos?.Any() ?? false)
+        if (jsonVideos?.Any() ?? false)
         {
-            foreach (var video in this.allVideos)
+            foreach (var video in jsonVideos)
             {
                 var v = new Video
                 {
                     Caption = video.Caption,
-                    Dir = string.IsNullOrWhiteSpace(video.Dir) ? Path.GetDirectoryName(video.VideoPath) : video.Dir,
+                    Dir = Path.GetDirectoryName(video.VideoPath).Replace(this.SelectedDir, string.Empty).Trim('\\'),
                     VideoPath = video.VideoPath,
                     Length = video.Length,
                     PlayCount = video.PlayCount,
-                    ModifyTime = video.ModifyTime ?? DateTime.Now,
+                    ModifyTime = video.MidifyTime ?? DateTime.Now,
                     Evaluate = video.Evaluate,
                     Id = this.dataContext.IdGenerator.CreateId(),
+                    DataDir = video.VideoDir,
+                    VideoDir = this.SelectedDir.Replace(dbpath.dir, string.Empty),
                 };
 
                 v.Snapshots.AddRange(video.Snapshots.Select(s => new Snapshot
                 {
                     Id = this.dataContext.IdGenerator.CreateId(),
                     VideoId = v.Id,
-                    Path = s.Path,
+                    Path = s,
                 }));
 
                 videos.Add(v);
@@ -91,8 +77,12 @@ partial class MainViewModel
     /// </remarks>
     private async Task AddRangeAsync(List<Video> videos)
     {
-        this.dataContext.Videos.AddRange(videos);
-        await this.dataContext.SaveChangesAsync();
+        var newVideos = videos.Where(v => !this.dataContext.Videos.Any(m => m.Id == v.Id)).ToList();
+        if (newVideos?.Any() ?? false)
+        {
+            this.dataContext.Videos.AddRange(newVideos);
+            await this.dataContext.SaveChangesAsync();
+        }
     }
 
     /// <summary>
@@ -105,8 +95,11 @@ partial class MainViewModel
     /// </remarks>
     private async Task AddAsync(Video video)
     {
-        this.dataContext.Videos.Add(video);
-        await this.dataContext.SaveChangesAsync();
+        if (!this.dataContext.Videos.Any(m => m.Id == video.Id))
+        {
+            this.dataContext.Videos.Add(video);
+            await this.dataContext.SaveChangesAsync();
+        }
     }
 
     /// <summary>
@@ -120,45 +113,57 @@ partial class MainViewModel
     private async Task UpdateAsync(Video video)
     {
         var existingVideo = this.dataContext.Videos
-        .Include(v => v.Snapshots)
-        .FirstOrDefault(v => v.Id == video.Id);
+            .Include(v => v.Snapshots)
+            .FirstOrDefault(v => v.Id == video.Id);
 
         if (existingVideo != null)
         {
             this.dataContext.Entry(existingVideo).CurrentValues.SetValues(video);
+            var delSnapshots = this.dataContext.Snapshots
+                .Where(s => s.VideoId == video.Id).ToList();
 
-            // 更新或添加 Snapshots
-            foreach (var snapshot in video.Snapshots)
+            for (int i = delSnapshots.Count - 1; i >= 0; i--)
             {
-                var existingSnapshot = existingVideo.Snapshots
-                    .FirstOrDefault(s => s.Id == snapshot.Id);
-
-                if (existingSnapshot != null)
+                var snap = delSnapshots[i];
+                if (video.Snapshots.Any(m => m.Id == snap.Id))
                 {
-                    // 更新现有 Snapshot
-                    this.dataContext.Entry(existingSnapshot).CurrentValues.SetValues(snapshot);
-                }
-                else
-                {
-                    // 添加新 Snapshot
-                    existingVideo.Snapshots.Add(snapshot);
+                    var newSnap = video.Snapshots.FirstOrDefault(s => s.Id == snap.Id);
+                    video.Snapshots.Remove(newSnap);
+                    delSnapshots.Remove(snap);
                 }
             }
 
-            // 移除不存在的 Snapshots
-            foreach (var existingSnapshot in existingVideo.Snapshots)
-            {
-                if (!video.Snapshots.Any(s => s.Id == existingSnapshot.Id))
-                {
-                    existingVideo.Snapshots.Remove(existingSnapshot);
-                    this.dataContext.Snapshots.Remove(existingSnapshot);
-                }
-            }
+            if (delSnapshots?.Any() ?? false)
+                this.dataContext.Snapshots.RemoveRange(delSnapshots);
 
+            if (video.Snapshots?.Any() ?? false)
+                this.dataContext.Snapshots.AddRange(video.Snapshots);
+            
             await this.dataContext.SaveChangesAsync();
         }
     }
 
+    /// <summary>
+    /// 更新数据库中的视频对象。
+    /// </summary>
+    /// <param name="video">要更新的视频对象。</param>
+    /// <remarks>
+    /// 此方法用于更新数据上下文中的视频对象，并保存更改到数据库。
+    /// 在调用此方法之前，请确保视频对象的 ID 对应于数据库中已存在的记录，并且所有需要更新的属性都已正确设置。
+    /// </remarks>
+    private async Task UpdateOnlyVideoAsync(Video video)
+    {
+        var existingVideo = this.dataContext.Videos
+            .Include(v => v.Snapshots)
+            .FirstOrDefault(v => v.Id == video.Id);
+
+        if (existingVideo != null)
+        {
+            this.dataContext.Entry(existingVideo).CurrentValues.SetValues(video);
+            await this.dataContext.SaveChangesAsync();
+        }
+    }
+    
     /// <summary>
     /// 从数据库中删除指定的视频对象。
     /// </summary>
@@ -168,10 +173,25 @@ partial class MainViewModel
     /// 在调用此方法之前，请确保视频对象已经存在于数据上下文中。
     /// 需要注意的是，如果视频对象在数据库中有关联的数据（如快照），则可能需要先删除或处理这些关联数据。
     /// </remarks>
-    private async Task DeleteAsync(Video video)
+    private async Task DeleteAsync(Video video) => await this.DeleteAsync(video.Id);
+
+    /// <summary>
+    /// 异步删除指定 ID 的实体。
+    /// </summary>
+    /// <param name="id">要删除的实体的唯一标识符。</param>
+    /// <returns>无返回值的 Task，表示异步操作。</returns>
+    /// <remarks>
+    /// 如果找不到指定的实体，此方法可能会抛出异常或执行特定的错误处理逻辑，
+    /// 具体取决于实现的细节。
+    /// </remarks>
+    private async Task DeleteAsync(long id)
     {
-        this.dataContext.Videos.Remove(video);
-        await this.dataContext.SaveChangesAsync();
+        var video = this.dataContext.Videos.FirstOrDefault(v => v.Id == id);
+        if (video != null)
+        {
+            this.dataContext.Videos.Remove(video);
+            await this.dataContext.SaveChangesAsync();
+        }
     }
 
     /// <summary>
@@ -185,9 +205,12 @@ partial class MainViewModel
     /// </remarks>
     private async Task DeleteDirAsync(string dir)
     {
-        var delVideos = this.dataContext.Videos.Where(v => v.VideoDir == dir).ToList(); 
-        this.dataContext.Videos.RemoveRange(delVideos);
-        await this.dataContext.SaveChangesAsync();
+        var delVideos = this.dataContext.Videos.Where(v => v.VideoDir == dir).ToList();
+        if (delVideos?.Any() ?? false)
+        {
+            this.dataContext.Videos.RemoveRange(delVideos);
+            await this.dataContext.SaveChangesAsync();
+        }
     }
 
     /// <summary>
@@ -214,7 +237,7 @@ partial class MainViewModel
         var delSnaps = await this.dataContext.Snapshots.Where(s => snapshots.Any(s1 => s1.Id == s.Id)).ToListAsync();
 
         if (delSnaps?.Any() ?? false)
-        { 
+        {
             this.dataContext.Snapshots.RemoveRange(delSnaps);
             await this.dataContext.SaveChangesAsync();
         }
@@ -233,7 +256,8 @@ partial class MainViewModel
     /// <remarks>
     /// 此方法允许通过目录、标题关键字和评价分数进行筛选，并支持分页和排序。
     /// </remarks>
-    private async Task<List<Video>> QueryAsync(string? dir = null, string? caption = null, int? evaluate = null, bool isDesc = true, int skip = 0, int take = 10)
+    private async Task<List<Video>> QueryAsync(string? dir = null, string? caption = null, int? evaluate = null,
+        bool isDesc = true, int skip = 0, int take = int.MaxValue)
     {
         var query = this.dataContext.Videos
             .Include(v => v.Snapshots).AsQueryable();
@@ -247,7 +271,9 @@ partial class MainViewModel
         if (evaluate.HasValue)
             query = query.Where(m => m.Evaluate >= evaluate.Value);
 
-        query = isDesc ? query.OrderByDescending(v => v.ModifyTime) : (IQueryable<Video>)query.OrderBy(v => v.ModifyTime);
+        query = isDesc
+            ? query.OrderByDescending(v => v.ModifyTime)
+            : (IQueryable<Video>)query.OrderBy(v => v.ModifyTime);
 
         return await query.Skip(skip).Take(take).ToListAsync();
     }

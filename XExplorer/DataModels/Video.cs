@@ -15,7 +15,8 @@ public abstract class ModelBase
 
 /// <summary>
 /// 表示一个视频实体，用于数据库操作。
-/// </summary> 
+/// </summary>
+[Table("Videos")]
 public class Video : ModelBase
 {
     /// <summary>
@@ -32,6 +33,11 @@ public class Video : ModelBase
     /// 获取或设置视频文件的存储目录。
     /// </summary>
     public string VideoDir { get; set; }
+    
+    /// <summary>
+    /// 获取或设置视频文件的快照存储目录。
+    /// </summary>
+    public string DataDir { get; set; }
 
     /// <summary>
     /// 获取或设置视频文件的完整路径。
@@ -67,6 +73,7 @@ public class Video : ModelBase
 /// <summary>
 /// 表示视频快照的实体类。
 /// </summary>
+[Table("Snapshots")]
 public class Snapshot : ModelBase
 {
     /// <summary>

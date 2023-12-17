@@ -118,18 +118,6 @@ partial class MainViewModel
                         }
                     }
                 }
-
-                if (this.allVideos?.Any() ?? false)
-                {
-                    foreach (var item in this.allVideos)
-                    {
-                        if (string.IsNullOrWhiteSpace(item.Dir))
-                        {
-                            item.Dir = Path.GetDirectoryName(item.VideoPath);
-                            item.Dir = item.Dir.Replace(this.SelectedDir, string.Empty).Trim('\\');
-                        }
-                    }
-                }
             });
 
             if (filterdCount > 0)
@@ -368,8 +356,8 @@ partial class MainViewModel
             enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
             enty.Length = item.Length / 1024 / 1024; // 视频大小
             enty.ModifyTime = item.LastWriteTime; // 修改时间
-            enty.VideoDir = datapath;
-            enty.Dir = Path.GetDirectoryName(enty.VideoPath);
+            enty.VideoDir = this.SelectedDir;
+            enty.Dir = Path.GetDirectoryName(enty.VideoPath).Replace(this.SelectedDir, string.Empty).Trim('\\');
 
             foreach (var time in times)
             {
@@ -390,6 +378,7 @@ partial class MainViewModel
 
             this.DeleteVideoImages(enty);
             enty.Snapshots = images; // 截图文件 
+            await this.UpdateAsync(enty); // 更新视频实体
         }
         catch (Exception ex)
         {
@@ -421,7 +410,6 @@ partial class MainViewModel
         var length = media.Duration;
         return length;
     }
-
 
     /// <summary>
     /// 删除视频图片
@@ -626,7 +614,29 @@ partial class MainViewModel
             image.Dispose();
         }
     }
-
+    
+    /// <summary>
+    /// 异步保存指定对象到数据存储。
+    /// </summary>
+    /// <param name="obj">要保存的对象。这个对象应该是一个实体类的实例，包含要存储的数据。</param>
+    /// <returns>无返回值的 Task，表示异步操作。</returns>
+    /// <remarks>
+    /// 此方法会将传入的对象保存到配置的数据存储（例如数据库）中。
+    /// 请确保传入的对象符合数据存储的要求，例如，它应该是一个已配置的实体类的实例。
+    /// 如果保存操作失败，此方法可能会抛出异常。
+    /// </remarks>
+    private async Task SaveOnlyVidoeAsync(object obj)
+    {
+        if (obj is VideoEntry entry)
+        {
+            var video = this.ToVideo(entry);
+            await this.UpdateOnlyVideoAsync(video);
+        }
+        else if (obj is Video video)
+        {
+            await this.UpdateOnlyVideoAsync(video);
+        }
+    }
     #endregion
 
     #region 清理

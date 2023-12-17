@@ -83,8 +83,7 @@ public class SQLiteContext : DbContext
         modelBuilder.Entity<Video>()
             .HasMany(v => v.Snapshots)
             .WithOne()
-            .HasForeignKey(s => s.VideoId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasForeignKey(s => s.VideoId);
     }
 
     /// <summary>

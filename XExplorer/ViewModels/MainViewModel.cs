@@ -39,7 +39,7 @@ public partial class MainViewModel : ObservableObject
         this.dataPath = AppSettingsUtils.Default.WinDataPath;
         this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
         this.taskCount = AppSettingsUtils.Default.TaskCount;
-        VideoEntry.SaveCmd = this.SaveDataCommand;
+        this.SelectedDir = this.DirPaths.FirstOrDefault(); 
         var dbpath = this.GetSqlitePath();
         this.dataContext = new SQLiteContext(dbpath.dbfile);
     }
@@ -67,7 +67,8 @@ public partial class MainViewModel : ObservableObject
             this.isAllLoad = false;
             this.isLoadData = true;
             this.PicVisibility = Visibility.Collapsed;
-            this.VideoVisibility = Visibility.Visible; 
+            this.VideoVisibility = Visibility.Visible;
+            VideoEntry.SaveCmd = null;
             this.allVideos = await this.LoadDirAsync(this.SelectedDir);
 
             if (this.allVideos?.Any() ?? false)
@@ -86,6 +87,7 @@ public partial class MainViewModel : ObservableObject
         {
             this.isLoadData = false;
             this.IsBusy = false;
+            VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
         }
     }
 
@@ -111,6 +113,7 @@ public partial class MainViewModel : ObservableObject
             this.isAllLoad = true;
             this.PicVisibility = Visibility.Collapsed;
             this.VideoVisibility = Visibility.Visible;
+            VideoEntry.SaveCmd = null;
             this.allVideos = await this.LoadDirAsync(this.SelectedDir);
 
             if (this.allVideos?.Any() ?? false)
@@ -129,6 +132,7 @@ public partial class MainViewModel : ObservableObject
         {
             this.isLoadData = false;
             this.IsBusy = false;
+            VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
         }
     }
 
@@ -186,6 +190,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.IsBusy = true;
+            VideoEntry.SaveCmd = null;
 
             await Task.Run(() =>
             {
@@ -198,17 +203,21 @@ public partial class MainViewModel : ObservableObject
                         this.allVideos = this.allVideos.OrderByDescending(m => m.ModifyTime).ToList();
                         break;
                     case "3":
-                        this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenByDescending(m => m.ModifyTime).ToList();
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount)
+                            .ThenByDescending(m => m.ModifyTime).ToList();
                         break;
                     case "4":
-                        this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenBy(m => m.ModifyTime).ToList();
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.PlayCount).ThenBy(m => m.ModifyTime)
+                            .ToList();
                         break;
                     case "5":
-                        this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenBy(m => m.ModifyTime).ToList();
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenBy(m => m.ModifyTime)
+                            .ToList();
                         break;
                     case "0":
                     default:
-                        this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.ModifyTime).ToList();
+                        this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate)
+                            .ThenByDescending(m => m.ModifyTime).ToList();
                         break;
                 }
             });
@@ -230,6 +239,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.IsBusy = false;
+            VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
         }
     }
 
@@ -249,12 +259,18 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = true;
+            VideoEntry.SaveCmd = null;
             LoadNextItem(this.loadCount);
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }finally
+        {
+            this.IsBusy = false;
+            VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
         }
     }
 
@@ -415,7 +431,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.IsBusy = true;
-            var delCount = 0; 
+            var delCount = 0;
             await Task.Run(() =>
             {
                 var dirInfo = new DirectoryInfo(GetDataDirPath().dir);
@@ -460,7 +476,6 @@ public partial class MainViewModel : ObservableObject
                             }
                         }
                     }
-
                 }
             });
 
@@ -488,7 +503,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            this.IsBusy = true; 
+            this.IsBusy = true;
             this.Videos.Clear();
 
             await Task.Run(async () =>
@@ -544,41 +559,18 @@ public partial class MainViewModel : ObservableObject
                     await Task.Run(() => this.UnzipWith7Zip(zipFile, dirInfo.FullName));
                     Growl.Success("恢复完成");
                 }
+
                 break;
             case "zip":
-                var zipPath = Path.Combine(AppSettingsUtils.Default.BackupPath, $"data_{DateTime.Now:yyyy_MM_dd_HH_mm}.7z");
+                var zipPath = Path.Combine(AppSettingsUtils.Default.BackupPath,
+                    $"data_{DateTime.Now:yyyy_MM_dd_HH_mm}.7z");
                 await Task.Run(() => this.ZipDirectoryWith7Zip(AppSettingsUtils.Default.WinDataPath, zipPath));
                 break;
             default:
                 break;
         }
     }
-
-    /// <summary>
-    /// 保存视频实体的集合到一个JSON文件中。
-    /// </summary>
-    /// <remarks>
-    /// 此方法首先检查两个可能的视频实体集合 'Videos' 和 'videoCollection'，如果其中任何一个不为空，则将其序列化为 JSON 字符串。
-    /// 然后，它检查数据路径是否存在，如果不存在则创建它。最后，如果目标 JSON 文件已经存在，它会先删除该文件，然后将 JSON 字符串写入新的文件中。
-    /// </remarks>
-    [RelayCommand]
-    public async Task SaveDataAsync()
-    {
-        if (isLoadData)
-            return;
-         
-        try
-        {
-            var recount = await this.dataContext.SaveChangesAsync();
-            Log.Information($"Save Data Count {recount}");
-            Growl.Success($"Save Data Count {recount}");
-        }
-        catch (Exception ex)
-        {
-            Growl.Error(ex.ToString());
-        }
-    }
-
+    
     /// <summary>
     /// 删除不存在的视频的图片。
     /// </summary>
@@ -587,8 +579,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (this.allVideos?.Any() ?? false)
         {
-            this.DeleteVideoNotExistsImages(this.allVideos);
-            await this.SaveDataAsync();
+            this.DeleteVideoNotExistsImages(this.allVideos); 
         }
     }
 
@@ -613,8 +604,10 @@ public partial class MainViewModel : ObservableObject
             {
                 Process.Start(this.playerPath, path);
 
-                var video = this.Videos.FirstOrDefault(m => m.VideoPath == path);
-                video.PlayCount++;
+                var entry = this.Videos.FirstOrDefault(m => m.VideoPath == path);
+                entry.PlayCount++;
+
+                await this.UpdateAsync(this.ToVideo(entry));
             }
         }
         catch (Exception ex)
@@ -662,18 +655,19 @@ public partial class MainViewModel : ObservableObject
         try
         {
             this.IsBusy = false;
-            if (param is VideoEntry video)
+            if (param is VideoEntry entry)
             {
                 await Task.Run(async () =>
                 {
-                    if (File.Exists(video.VideoPath))
-                        File.Delete(video.VideoPath);
+                    if (File.Exists(entry.VideoPath))
+                        File.Delete(entry.VideoPath);
 
+                    var video = this.allVideos.FirstOrDefault(m => m.Id == entry.Id);
                     this.allVideos.Remove(video);
-                    await this.SaveDataAsync();
+                    await this.DeleteVideosAsync(new List<Video>() { video });
                 });
 
-                this.Videos.Remove(video);
+                this.Videos.Remove(entry);
             }
         }
         catch (Exception ex)
@@ -701,9 +695,9 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
-            if (param is VideoEntry video)
+            if (param is VideoEntry entry)
             {
-                var dirName = Path.GetDirectoryName(video.VideoPath);
+                var dirName = Path.GetDirectoryName(entry.VideoPath);
 
                 if (this.SelectedDir == dirName)
                 {
@@ -711,25 +705,28 @@ public partial class MainViewModel : ObservableObject
                     return;
                 }
 
-                var result = HandyControl.Controls.MessageBox.Show($"Are you sure you want to delete the folder {video.VideoPath}?", caption: "Question", MessageBoxButton.OKCancel);
+                var result = HandyControl.Controls.MessageBox.Show(
+                    $"Are you sure you want to delete the folder {entry.VideoPath}?", caption: "Question",
+                    MessageBoxButton.OKCancel);
 
                 if (result == MessageBoxResult.Cancel)
                     return;
 
-                var videos = this.Videos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
-                foreach (var item in videos)
+                var delVideos = this.allVideos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
+                foreach (var item in delVideos)
                 {
                     if (File.Exists(item.VideoPath))
                         File.Delete(item.VideoPath);
 
-                    this.Videos.Remove(item);
+                    var entryItem = this.Videos.FirstOrDefault(m => m.Id == item.Id);
+                    this.Videos.Remove(entryItem);
                     this.allVideos.Remove(item);
                 }
 
                 if (Directory.Exists(dirName))
                     Directory.Delete(dirName, true);
 
-                await this.SaveDataAsync();
+                await this.DeleteVideosAsync(delVideos);
             }
         }
         catch (Exception ex)
@@ -756,7 +753,8 @@ public partial class MainViewModel : ObservableObject
         {
             if (param is VideoEntry enty)
             {
-                await this.ProcessVideoAsync(enty);
+                var video = this.allVideos.FirstOrDefault(m => m.Id == enty.Id);
+                await this.ProcessVideoAsync(video);
             }
         }
         catch (Exception ex)
@@ -766,6 +764,26 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 将JSON数据转换为DB数据保存
+    /// </summary>
+    [RelayCommand]
+    public async Task ConvertVideoAsync()
+    {
+        try
+        {
+            var videos = await this.Json2SqliteAsync();
+            await this.AddRangeAsync(videos);
+            Growl.Success($"Convert Data Count {videos.Count}");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            Growl.Error($"{ex}");
+            throw;
+        }
+    }
+    
     #endregion
 
     #region Pics
@@ -823,7 +841,7 @@ public partial class MainViewModel : ObservableObject
         if (saveFileDialog.ShowDialog() ?? false)
         {
             var path = saveFileDialog.FileName;
-            this.RenderControlToImage(control, path,3440, 1440);
+            this.RenderControlToImage(control, path, 3440, 1440);
         }
     }
 

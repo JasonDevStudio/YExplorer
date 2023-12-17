@@ -113,6 +113,7 @@
                             <StackPanel>
                                 <MenuItem Header="保存" ToolTip="保存数据"  Command="{Binding SaveDataCommand}"/>
                                 <MenuItem Header="渲染" ToolTip="离屏渲染保存图片"  Command="{Binding SaveToImageCommand}"/>
+                                <MenuItem Header="转换" ToolTip="将JSON数据转换为Sqlite"  Command="{Binding ConvertVideoCommand}"/>
                             </StackPanel>
                         </hc:SplitButton.DropDownContent>
                     </hc:SplitButton>
@@ -247,12 +248,12 @@
                                             </ListBox.ItemsPanel>
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
-                                                    <Image Source="{Binding}" Style="{StaticResource MyImage}" >
+                                                    <Image Source="{Binding Path}" Style="{StaticResource MyImage}" >
                                                         <Image.ToolTip>
                                                             <ToolTip>
                                                                 <StackPanel>
-                                                                    <TextBlock Text="{Binding}" Style="{StaticResource DefaultTextBlock}" />
-                                                                    <Image Source="{Binding}"/>
+                                                                    <TextBlock Text="{Binding Path}" Style="{StaticResource DefaultTextBlock}" />
+                                                                    <Image Source="{Binding Path}"/>
                                                                 </StackPanel>
                                                             </ToolTip>
                                                         </Image.ToolTip>
