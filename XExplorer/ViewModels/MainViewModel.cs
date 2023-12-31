@@ -514,11 +514,10 @@ public partial class MainViewModel : ObservableObject
                 var dataDirPath = dataConf.dir;
                 var dataDir = new DirectoryInfo(dataDirPath);
 
-                if (dataDir.Exists)
-                {
+                if (dataDir.Exists) 
                     dataDir.Delete(true);
-                    await this.DeleteDirAsync(dataDir.FullName);
-                }
+
+                await this.DeleteDirAsync(this.SelectedDir);
             });
 
             Growl.Success($"清理数据资源完成.");
@@ -779,8 +778,7 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            Growl.Error($"{ex}");
-            throw;
+            Growl.Error($"{ex}"); 
         }
     }
     

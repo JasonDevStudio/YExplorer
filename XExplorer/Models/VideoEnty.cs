@@ -73,6 +73,11 @@ public partial class VideoEntry : ObservableObject
     [ObservableProperty] private long length;
 
     /// <summary>
+    /// 数据目录。
+    /// </summary>
+    [ObservableProperty] private string dataDir;
+
+    /// <summary>
     /// 视频的播放次数。
     /// </summary> 
     private long playCount;

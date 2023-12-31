@@ -1,5 +1,8 @@
 using System.Reflection.Emit;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using SnowflakeIdGeneratorForCSharp;
 using XExplorer.DataModels;
 
@@ -34,7 +37,7 @@ public class SQLiteContext : DbContext
     public DbSet<Snapshot> Snapshots { get; set; }
 
     #endregion
-    
+
     /// <summary>
     /// 初始化 SQLiteContext 类的新实例。
     /// </summary>
@@ -43,14 +46,17 @@ public class SQLiteContext : DbContext
     {
         DBFile = dbFile;
     }
-     
+
     /// <summary>
     /// 配置数据库（SQLite）的连接字符串。
     /// </summary>
     /// <param name="optionsBuilder">用于构建选项的构建器。</param>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-        optionsBuilder.UseSqlite($"Data Source={DBFile}");
+        optionsBuilder.UseSqlite($"Data Source={DBFile}").LogTo(Log.Information, LogLevel.Information);
+
+        // Enable sensitive data logging if needed
+        optionsBuilder.EnableSensitiveDataLogging();
     }
 
     /// <summary>
@@ -83,7 +89,8 @@ public class SQLiteContext : DbContext
         modelBuilder.Entity<Video>()
             .HasMany(v => v.Snapshots)
             .WithOne()
-            .HasForeignKey(s => s.VideoId);
+            .HasForeignKey(s => s.VideoId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 
     /// <summary>
@@ -126,6 +133,5 @@ public class SQLiteContext : DbContext
         };
 
         return snapshot;
-    }
-
-}
+    } 
+} 

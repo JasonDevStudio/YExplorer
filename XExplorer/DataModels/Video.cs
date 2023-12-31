@@ -27,17 +27,17 @@ public class Video : ModelBase
     /// <summary>
     /// 获取或设置视频文件的存储目录。
     /// </summary>
-    public string Dir { get; set; }
+    public string? Dir { get; set; }
 
     /// <summary>
     /// 获取或设置视频文件的存储目录。
     /// </summary>
-    public string VideoDir { get; set; }
+    public string? VideoDir { get; set; }
     
     /// <summary>
     /// 获取或设置视频文件的快照存储目录。
     /// </summary>
-    public string DataDir { get; set; }
+    public string? DataDir { get; set; }
 
     /// <summary>
     /// 获取或设置视频文件的完整路径。

@@ -22,6 +22,9 @@ using System.Windows.Media.Imaging;
 using System.Windows.Media;
 using XExplorer.Models;
 using XExplorer.DataModels;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using XExplorer.DataAccess;
 
 namespace XExplorer.ViewModels;
 
@@ -99,26 +102,45 @@ partial class MainViewModel
         try
         {
             var filterdCount = 0;
+            var times = new StringBuilder();
 
             await Task.Run(async () =>
-            { 
+            {
+                var stopWacth = Stopwatch.StartNew();
+
                 var videoEntities = await this.QueryAsync(dir);
-                 
+
+                stopWacth.Stop();
+                times.AppendLine($"Query times [{stopWacth.Elapsed.TotalSeconds}] s");
+                stopWacth.Restart();
+
                 if (videoEntities?.Any() ?? false)
                 {
-                    foreach (var video in videoEntities)
+                    videoEntities.AsParallel().ForAll(async video =>
                     {
                         if (video.Snapshots?.Any() ?? false)
                         {
                             var notExistsCount = video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
                             if (notExistsCount < video.Snapshots.Count / 2)
-                                this.allVideos?.Add(video);
+                                lock (this.allVideos)
+                                    this.allVideos?.Add(video);
                             else
                                 filterdCount++;
                         }
-                    }
+                    });
                 }
+
+                this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.ModifyTime).ThenBy(m => m.Dir).ToList();
+
+                stopWacth.Stop();
+                times.AppendLine($"Filter times [{stopWacth.Elapsed.TotalSeconds}] s");
             });
+
+            times.AppendLine($"Query Data count {this.allVideos.Count} .");
+            times.AppendLine($"Filterd Data count {filterdCount} .");
+
+
+            Growl.Info(times.ToString());
 
             if (filterdCount > 0)
                 Growl.Warning($"Filterd {filterdCount} videos.");
@@ -173,7 +195,7 @@ partial class MainViewModel
         if (count == -1)
         {
             count = this.allVideos.Count;
-            this.Videos = this.ToVideoEntities(this.allVideos); 
+            this.Videos = this.ToVideoEntities(this.allVideos);
         }
         else
         {
@@ -293,7 +315,7 @@ partial class MainViewModel
                     }
 
                     Log.Information($"Process Video {item.Name}.");
-                     
+
                     await this.ProcessVideoAsync(this.dataContext.CreateVideo(item.FullName));
                 }
                 catch (Exception ex)
@@ -327,6 +349,7 @@ partial class MainViewModel
         var picCount = 10;
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
+        var isNew = !this.dataContext.Videos.Any(m => m.Id == enty.Id);
 
         try
         {
@@ -358,6 +381,7 @@ partial class MainViewModel
             enty.ModifyTime = item.LastWriteTime; // 修改时间
             enty.VideoDir = this.SelectedDir;
             enty.Dir = Path.GetDirectoryName(enty.VideoPath).Replace(this.SelectedDir, string.Empty).Trim('\\');
+            enty.DataDir = datapath;
 
             foreach (var time in times)
             {
@@ -378,7 +402,11 @@ partial class MainViewModel
 
             this.DeleteVideoImages(enty);
             enty.Snapshots = images; // 截图文件 
-            await this.UpdateAsync(enty); // 更新视频实体
+
+            if (isNew)
+                await this.AddAsync(enty); // 添加视频实体
+            else
+                await this.UpdateAsync(enty); // 更新视频实体
         }
         catch (Exception ex)
         {
@@ -390,7 +418,7 @@ partial class MainViewModel
             mediaPlayer.Dispose();
         }
     }
-     
+
     /// <summary>
     /// 异步解析视频文件并返回其长度。
     /// </summary>
@@ -514,10 +542,16 @@ partial class MainViewModel
     {
         try
         {
+            var dbpath = this.GetSqlitePath();
+            this.dataContext.Database.CloseConnection();
+            this.dataContext.Dispose();
+            var backupFile = target.Replace(".7z", ".db");
+            File.Copy(dbpath.dbfile, backupFile, true);
+
             // 初始化一个新的ProcessStartInfo实例
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.FileName = "C:\\Program Files\\7-Zip\\7z.exe"; // 7z命令行工具的路径
-            startInfo.Arguments = $"a -t7z -mx9 \"{target}\" \"{source}\\*\""; // 命令行参数
+            startInfo.Arguments = $"a -t7z -mx9 \"{target}\" \"{source}\\*\" -x!*.db"; // 命令行参数
             startInfo.WindowStyle = ProcessWindowStyle.Normal; // 隐藏命令行窗口
 
             // 启动外部进程
@@ -538,6 +572,11 @@ partial class MainViewModel
         {
             Log.Error($"{ex}");
             Growl.Error("An error occurred: " + ex);
+        }
+        finally
+        {
+            var dbpath = this.GetSqlitePath();
+            this.dataContext = new SQLiteContext(dbpath.dbfile);
         }
 
         return false;
@@ -614,7 +653,7 @@ partial class MainViewModel
             image.Dispose();
         }
     }
-    
+
     /// <summary>
     /// 异步保存指定对象到数据存储。
     /// </summary>
@@ -631,10 +670,16 @@ partial class MainViewModel
         {
             var video = this.ToVideo(entry);
             await this.UpdateOnlyVideoAsync(video);
+
+            if (!this.isLoadData)
+                Growl.Info($"Save {video.Caption} success.");
         }
         else if (obj is Video video)
         {
             await this.UpdateOnlyVideoAsync(video);
+
+            if (!this.isLoadData)
+                Growl.Info($"Save {video.Caption} success.");
         }
     }
     #endregion

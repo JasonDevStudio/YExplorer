@@ -32,6 +32,10 @@ partial class MainViewModel
         var dbpath = this.GetSqlitePath();
         var jsonpath = this.GetDataDirPath();
         var videos = new List<Video>();
+
+        if (!File.Exists(jsonpath.file))
+            throw new FileNotFoundException(jsonpath.file);
+
         var json = await File.ReadAllTextAsync(jsonpath.file);
         var jsonVideos = JsonConvert.DeserializeObject<List<VideoJsonEnty>>(json);
 
@@ -138,7 +142,7 @@ partial class MainViewModel
 
             if (video.Snapshots?.Any() ?? false)
                 this.dataContext.Snapshots.AddRange(video.Snapshots);
-            
+
             await this.dataContext.SaveChangesAsync();
         }
     }
@@ -163,7 +167,7 @@ partial class MainViewModel
             await this.dataContext.SaveChangesAsync();
         }
     }
-    
+
     /// <summary>
     /// 从数据库中删除指定的视频对象。
     /// </summary>
@@ -187,11 +191,14 @@ partial class MainViewModel
     private async Task DeleteAsync(long id)
     {
         var video = this.dataContext.Videos.FirstOrDefault(v => v.Id == id);
+        var delSnapshots = this.dataContext.Snapshots.Where(s => s.VideoId == video.Id).ToList();
         if (video != null)
-        {
             this.dataContext.Videos.Remove(video);
-            await this.dataContext.SaveChangesAsync();
-        }
+
+        if (delSnapshots?.Any() ?? false)
+            this.dataContext.Snapshots.RemoveRange(delSnapshots);
+
+        await this.dataContext.SaveChangesAsync();
     }
 
     /// <summary>
@@ -206,11 +213,15 @@ partial class MainViewModel
     private async Task DeleteDirAsync(string dir)
     {
         var delVideos = this.dataContext.Videos.Where(v => v.VideoDir == dir).ToList();
+        var delSnapshots = this.dataContext.Snapshots.Where(s => delVideos.Any(v => v.Id == s.VideoId)).ToList();
+
         if (delVideos?.Any() ?? false)
-        {
             this.dataContext.Videos.RemoveRange(delVideos);
-            await this.dataContext.SaveChangesAsync();
-        }
+
+        if (delSnapshots?.Any() ?? false)
+            this.dataContext.Snapshots.RemoveRange(delSnapshots);
+
+        await this.dataContext.SaveChangesAsync();
     }
 
     /// <summary>
@@ -269,11 +280,11 @@ partial class MainViewModel
             query = query.Where(m => m.Caption.Contains(caption));
 
         if (evaluate.HasValue)
-            query = query.Where(m => m.Evaluate >= evaluate.Value);
+            query = query.Where(m => m.Evaluate >= evaluate.Value); 
 
         query = isDesc
-            ? query.OrderByDescending(v => v.ModifyTime)
-            : (IQueryable<Video>)query.OrderBy(v => v.ModifyTime);
+            ? query.OrderByDescending(m => m.Evaluate).ThenByDescending(v => v.ModifyTime).ThenBy(m => m.Dir)
+            : (IQueryable<Video>)query.OrderByDescending(m => m.Evaluate).ThenBy(v => v.ModifyTime).ThenBy(m => m.Dir);
 
         return await query.Skip(skip).Take(take).ToListAsync();
     }
