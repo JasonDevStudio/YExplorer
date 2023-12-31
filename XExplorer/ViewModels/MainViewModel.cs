@@ -39,8 +39,9 @@ public partial class MainViewModel : ObservableObject
         this.dataPath = AppSettingsUtils.Default.WinDataPath;
         this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
         this.taskCount = AppSettingsUtils.Default.TaskCount;
-        this.SelectedDir = this.DirPaths.FirstOrDefault(); 
+        this.SelectedDir = this.DirPaths.FirstOrDefault();
         var dbpath = this.GetSqlitePath();
+        VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
         this.dataContext = new SQLiteContext(dbpath.dbfile);
     }
 
@@ -67,8 +68,7 @@ public partial class MainViewModel : ObservableObject
             this.isAllLoad = false;
             this.isLoadData = true;
             this.PicVisibility = Visibility.Collapsed;
-            this.VideoVisibility = Visibility.Visible;
-            VideoEntry.SaveCmd = null;
+            this.VideoVisibility = Visibility.Visible; 
             this.allVideos = await this.LoadDirAsync(this.SelectedDir);
 
             if (this.allVideos?.Any() ?? false)
@@ -86,8 +86,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.isLoadData = false;
-            this.IsBusy = false;
-            VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
+            this.IsBusy = false; 
         }
     }
 
@@ -112,8 +111,7 @@ public partial class MainViewModel : ObservableObject
             this.isLoadData = true;
             this.isAllLoad = true;
             this.PicVisibility = Visibility.Collapsed;
-            this.VideoVisibility = Visibility.Visible;
-            VideoEntry.SaveCmd = null;
+            this.VideoVisibility = Visibility.Visible; 
             this.allVideos = await this.LoadDirAsync(this.SelectedDir);
 
             if (this.allVideos?.Any() ?? false)
@@ -131,8 +129,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.isLoadData = false;
-            this.IsBusy = false;
-            VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
+            this.IsBusy = false; 
         }
     }
 
@@ -267,7 +264,8 @@ public partial class MainViewModel : ObservableObject
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
-        }finally
+        }
+        finally
         {
             this.IsBusy = false;
             VideoEntry.SaveCmd = this.SaveOnlyVidoeAsync;
@@ -514,7 +512,7 @@ public partial class MainViewModel : ObservableObject
                 var dataDirPath = dataConf.dir;
                 var dataDir = new DirectoryInfo(dataDirPath);
 
-                if (dataDir.Exists) 
+                if (dataDir.Exists)
                     dataDir.Delete(true);
 
                 await this.DeleteDirAsync(this.SelectedDir);
@@ -569,7 +567,7 @@ public partial class MainViewModel : ObservableObject
                 break;
         }
     }
-    
+
     /// <summary>
     /// 删除不存在的视频的图片。
     /// </summary>
@@ -578,13 +576,34 @@ public partial class MainViewModel : ObservableObject
     {
         if (this.allVideos?.Any() ?? false)
         {
-            this.DeleteVideoNotExistsImages(this.allVideos); 
+            this.DeleteVideoNotExistsImages(this.allVideos);
         }
     }
 
     #endregion
 
     #region Details
+
+    /// <summary>
+    /// 保存视频
+    /// </summary>
+    /// <param name="param">视频</param>
+    /// <returns>Task</returns>
+    [RelayCommand]
+    public async Task SaveOnlyVideoAsync(object param)
+    {
+        try
+        {
+            if (param is VideoEntry entry)
+            { 
+                await this.UpdateAsync(this.ToVideo(entry));
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+        }
+    }
 
     /// <summary>
     /// 播放指定路径的视频文件。
@@ -778,10 +797,10 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
-            Growl.Error($"{ex}"); 
+            Growl.Error($"{ex}");
         }
     }
-    
+     
     #endregion
 
     #region Pics

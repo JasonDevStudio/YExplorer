@@ -223,7 +223,13 @@
                                             <RowDefinition Height="40"></RowDefinition>
                                         </Grid.RowDefinitions>
                                         <StackPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="5" Orientation="Horizontal" Margin="10,0,0,0">
-                                            <hc:Rate Value="{Binding Evaluate, Mode=TwoWay}" Count="5" Margin="0,6,0,0" Foreground="{DynamicResource DangerBrush}"/>
+                                            <hc:Rate Value="{Binding Evaluate, Mode=TwoWay}" Count="5" Margin="0,6,0,0" Foreground="{DynamicResource DangerBrush}">
+                                                <i:Interaction.Triggers>
+                                                    <i:EventTrigger EventName="ValueChanged">
+                                                        <i:InvokeCommandAction Command="{Binding  SaveChanged}" CommandParameter="{Binding }" />
+                                                    </i:EventTrigger>
+                                                </i:Interaction.Triggers>
+                                            </hc:Rate>                                            
                                             <Label Content="==="/>
                                             <Label Content="{Binding Dir}"/>
                                         </StackPanel>

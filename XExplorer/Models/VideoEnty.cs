@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Newtonsoft.Json;
@@ -11,39 +12,14 @@ namespace XExplorer.Models;
 /// </summary>
 public partial class VideoEntry : ObservableObject
 {
+    public VideoEntry()
+    {
+        this.SaveChanged = new AsyncRelayCommand<object>(SaveCmd);
+    }
+
+    [JsonIgnore] public IAsyncRelayCommand<object> SaveChanged { get; set; }
+
     [JsonIgnore] public static Func<object, Task> SaveCmd { get; set; }
-
-    /// <summary>
-    /// 评分
-    /// </summary>
-    public int Evaluate
-    {
-        get => this.evaluate;
-        set
-        {
-            if(this.evaluate == value) 
-                return;
-            
-            this.SetProperty(ref this.evaluate, value);
-            SaveCmd?.Invoke(this);
-        }
-    }
-
-    /// <summary>
-    /// 获取或设置视频的播放次数。
-    /// </summary>
-    public long PlayCount
-    {
-        get => this.playCount;
-        set
-        {
-            if (this.playCount == value) 
-                return;
-            
-            this.SetProperty(ref this.playCount, value);
-            SaveCmd?.Invoke(this);
-        }
-    }
 
     [ObservableProperty] private long id;
 
@@ -80,18 +56,19 @@ public partial class VideoEntry : ObservableObject
     /// <summary>
     /// 视频的播放次数。
     /// </summary> 
-    private long playCount;
+    [ObservableProperty] private long playCount;
 
     /// <summary>
     /// 视频的最后修改时间。
     /// </summary>
-    [ObservableProperty] [JsonProperty("MidifyTime")]
+    [ObservableProperty]
+    [JsonProperty("MidifyTime")]
     private DateTime? modifyTime;
 
     /// <summary>
     /// 视频评价分数。
     /// </summary> 
-    private int evaluate;
+    [ObservableProperty] private int evaluate;
 
     /// <summary>
     /// 视频的快照列表。
