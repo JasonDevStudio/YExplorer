@@ -22,11 +22,17 @@ namespace XExplorer
         }
 
         private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
-
         {
-            if (this.DataContext is MainViewModel mvm)
-            {
-                var scrollViewer = sender as HandyControl.Controls.ScrollViewer;
+            var scrollViewer = (ScrollViewer)sender;
+
+            if (e.VerticalOffset <= 0)
+                return;
+
+            // 检查是否已经滚动到底部
+            bool isAtBottom = e.VerticalOffset >= scrollViewer.ScrollableHeight;
+
+            if (isAtBottom && this.DataContext is MainViewModel mvm)
+            { 
                 dynamic obj = new { VerticalOffset = e.VerticalOffset, ScrollableHeight = scrollViewer.ScrollableHeight };
                 mvm.ScrollChanged(obj);
             }
@@ -43,7 +49,7 @@ namespace XExplorer
             {
                 // 滚动条已经到达底部的逻辑处理 
                 if (this.DataContext is MainViewModel mvm)
-                { 
+                {
                     dynamic obj = new { VerticalOffset = e.VerticalOffset, ScrollableHeight = scrollViewer.ScrollableHeight };
                     await mvm.PicScrollChanged(obj);
                     var newOffset = scrollViewer.VerticalOffset - 1; // 减少 1 像素

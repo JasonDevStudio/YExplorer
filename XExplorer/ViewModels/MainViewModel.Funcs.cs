@@ -120,7 +120,8 @@ partial class MainViewModel
                     {
                         if (video.Snapshots?.Any() ?? false)
                         {
-                            var notExistsCount = video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
+                            var notExistsCount =
+                                video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
                             if (notExistsCount < video.Snapshots.Count / 2)
                                 lock (this.allVideos)
                                     this.allVideos?.Add(video);
@@ -130,7 +131,8 @@ partial class MainViewModel
                     });
                 }
 
-                this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.ModifyTime).ThenBy(m => m.Dir).ToList();
+                this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.ModifyTime)
+                    .ThenBy(m => m.Dir).ToList();
 
                 stopWacth.Stop();
                 times.AppendLine($"Filter times [{stopWacth.Elapsed.TotalSeconds}] s");
@@ -153,6 +155,81 @@ partial class MainViewModel
         finally
         {
             Log.Information($"End Load {dir} ...");
+        }
+
+        return this.allVideos;
+    }
+
+    /// <summary>
+    /// 异步加载指定目录下的视频实体列表。
+    /// </summary>
+    /// <param name="dir">表示目标目录的对象。</param>
+    /// <returns>
+    /// 表示异步操作的任务，任务的结果是视频实体列表。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先获取数据文件的路径，然后检查该文件是否存在。如果文件存在，它会从文件中读取JSON字符串，并将其反序列化为视频实体列表。
+    /// 如果文件不存在，它会检查是否有可用的视频实体集合，并将其转换为列表。
+    /// </remarks>
+    private async Task<List<Video>> LoadVideosAsync()
+    {
+        Log.Information($"Start load videos ...");
+
+        try
+        {
+            var filterdCount = 0;
+            var times = new StringBuilder();
+
+            await Task.Run(async () =>
+            {
+                var stopWacth = Stopwatch.StartNew();
+
+                this.allVideos = await this.QueryAsync();
+
+                stopWacth.Stop();
+                times.AppendLine($"Query times [{stopWacth.Elapsed.TotalSeconds}] s");
+                stopWacth.Restart();
+
+                ////if (videoEntities?.Any() ?? false)
+                ////{
+                ////    videoEntities.AsParallel().ForAll(async video =>
+                ////    {
+                ////        if (video.Snapshots?.Any() ?? false)
+                ////        {
+                ////            var notExistsCount =
+                ////                video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
+                ////            if (notExistsCount < video.Snapshots.Count / 2)
+                ////                lock (this.allVideos)
+                ////                    this.allVideos?.Add(video);
+                ////            else
+                ////                filterdCount++;
+                ////        }
+                ////    });
+                ////}
+
+                this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.ModifyTime)
+                    .ThenBy(m => m.Dir).ToList();
+
+                stopWacth.Stop();
+                times.AppendLine($"Filter times [{stopWacth.Elapsed.TotalSeconds}] s");
+            });
+
+            times.AppendLine($"Query Data count {this.allVideos.Count} .");
+            times.AppendLine($"Filterd Data count {filterdCount} .");
+             
+            Growl.Info(times.ToString());
+
+            if (filterdCount > 0)
+                Growl.Warning($"Filterd {filterdCount} videos.");
+        }
+        catch (Exception ex)
+        {
+            Log.Information($"Error: {ex}");
+            Growl.Error($"{ex}");
+        }
+        finally
+        {
+            Log.Information($"End Load ...");
         }
 
         return this.allVideos;
@@ -199,12 +276,32 @@ partial class MainViewModel
         }
         else
         {
+            var tmpEntiries = new List<Video>();
             var entries = this.allVideos.Skip(this.Videos.Count).Take(count);
 
             if (entries?.Any() ?? false)
             {
-                foreach (var video in entries)
-                    this.Videos.Add(this.ToVideoEntry(video));
+                entries.AsParallel().ForAll(async video =>
+                {
+                    if (video.Snapshots?.Any() ?? false)
+                    {
+                        var notExistsCount =
+                            video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
+
+                        if (notExistsCount < video.Snapshots.Count / 2)
+                            lock (tmpEntiries)
+                                tmpEntiries?.Add(video);
+                    }
+                });
+            }
+
+            if (tmpEntiries?.Any() ?? false)
+            {
+                if (Application.Current.Dispatcher.CheckAccess())
+                { 
+                    foreach (var video in tmpEntiries)
+                        this.Videos.Add(this.ToVideoEntry(video));
+                }
             }
         }
     }
@@ -316,7 +413,7 @@ partial class MainViewModel
 
                     Log.Information($"Process Video {item.Name}.");
 
-                    await this.ProcessVideoAsync(this.dataContext.CreateVideo(item.FullName));
+                    await this.TryProcessVideoAsync(this.dataContext.CreateVideo(item.FullName));
                 }
                 catch (Exception ex)
                 {
@@ -334,9 +431,35 @@ partial class MainViewModel
     }
 
     /// <summary>
+    /// 尝试处理视频，最长等待时间为一分钟。
+    /// </summary>
+    /// <param name="item">视频项</param>
+    /// <returns>表示异步操作的任务。</returns>
+    public async Task TryProcessVideoAsync(Video item)
+    {
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+        {
+            try
+            {
+                await ProcessVideoAsync(item, cts.Token);
+                Log.Information($"Process Video {item.Caption} Competed.");
+            }
+            catch (OperationCanceledException ex)
+            {
+                Log.Information($"Process Video {item.Caption} Canceled.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Process Video {item.Caption} Error.", ex);
+            }
+        }
+    }
+
+    /// <summary>
     /// 异步处理单个视频文件。
     /// </summary>
     /// <param name="enty">表示视频实体的对象。</param>
+    /// <param name="cancellationToken">用于观察超时或取消通知的取消令牌。</param>
     /// <returns>
     /// 表示异步操作的任务。
     /// </returns>
@@ -344,12 +467,13 @@ partial class MainViewModel
     /// 该方法使用LibVLC库初始化一个MediaPlayer对象，并打开指定的视频文件。然后在规定的时间间隔内抓取帧并将其保存为图像。
     /// 该方法还更新一个已存在的视频实体，并将其序列化为JSON文件。
     /// </remarks>
-    private async Task ProcessVideoAsync(Video enty)
+    private async Task ProcessVideoAsync(Video enty, CancellationToken cancellationToken)
     {
         var picCount = 10;
         using var libVLC = new LibVLC();
         using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC);
         var isNew = !this.dataContext.Videos.Any(m => m.Id == enty.Id);
+        Log.Information($"Video {enty.Caption} is {(isNew ? "New" : "already exists")}.");
 
         try
         {
@@ -357,6 +481,12 @@ partial class MainViewModel
             var times = new List<long>(); // 截图时间点
             var images = new List<Snapshot>(); // 截图文件
             var length = await this.ParseMediaAsync(libVLC, item);
+
+            Log.Information($"Video {enty.Caption} parse times {length / 1000} s.");
+
+            // 使用cancellationToken.ThrowIfCancellationRequested来检查取消请求
+            cancellationToken.ThrowIfCancellationRequested();
+
             var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
             var interval = length / picCount; // 截图时间间隔
             var (datapath, jsonfile, name) = this.GetDataDirPath();
@@ -372,9 +502,15 @@ partial class MainViewModel
             mediaPlayer.Play();
             mediaPlayer.ToggleMute(); // 静音
             await Task.Delay(200);
+            Log.Information($"Video {enty.Caption} start paly.");
+            // 使用cancellationToken.ThrowIfCancellationRequested来检查取消请求
+            cancellationToken.ThrowIfCancellationRequested();
 
             while (mediaPlayer.State != VLCState.Playing)
+            {
                 await Task.Delay(500);
+                cancellationToken.ThrowIfCancellationRequested();
+            }
 
             enty.Caption = Path.GetFileNameWithoutExtension(enty.VideoPath); // 视频标题
             enty.Length = item.Length / 1024 / 1024; // 视频大小
@@ -382,9 +518,12 @@ partial class MainViewModel
             enty.VideoDir = this.SelectedDir;
             enty.Dir = Path.GetDirectoryName(enty.VideoPath).Replace(this.SelectedDir, string.Empty).Trim('\\');
             enty.DataDir = datapath;
+            enty.MD5 = await this.GetMd5CodeAsync(enty.VideoPath); // MD5
 
             foreach (var time in times)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var picName = $"{Guid.NewGuid()}.jpg";
                 var snapshot = Path.Combine(datapath, picName);
                 mediaPlayer.Time = time; // 设置播放时间
@@ -400,13 +539,20 @@ partial class MainViewModel
                 }
             }
 
+            Log.Information($"Video {enty.Caption} get images completed.");
             this.DeleteVideoImages(enty);
             enty.Snapshots = images; // 截图文件 
+
+            Log.Information($"Video {enty.Caption} delete images completed.");
+
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (isNew)
                 await this.AddAsync(enty); // 添加视频实体
             else
                 await this.UpdateAsync(enty); // 更新视频实体
+
+            Log.Information($"Video {enty.Caption} {(isNew ? "add" : "update")} completed.");
         }
         catch (Exception ex)
         {
@@ -416,6 +562,86 @@ partial class MainViewModel
         {
             mediaPlayer.Stop();
             mediaPlayer.Dispose();
+        }
+    }
+
+    private async Task CheckNotExistsVideosAsync()
+    {
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+        {
+            try
+            {
+                await Task.Run(async () =>
+                {
+                    var videos = this.dataContext.Videos.Where(m => m.Status == 1);
+
+                    Parallel.ForEach(videos, item =>
+                    {
+                        item.Status = Convert.ToDecimal(File.Exists(item.VideoPath));
+                    });
+
+                    //foreach (var item in videos)
+                    //    item.Status = Convert.ToDecimal(File.Exists(item.VideoPath));
+
+                    this.dataContext.SaveChanges();
+                });
+
+                Log.Information($"Process Video NotExists Competed.");
+            }
+            catch (OperationCanceledException ex)
+            {
+                Log.Information($"Process Video NotExists Canceled.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Process Video NotExists Error. {ex}");
+            }
+        }
+    }
+
+    private async Task ProcessVideoMd5Async(Video item)
+    {
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+        {
+            try
+            {
+                if (File.Exists(item.VideoPath))
+                    item.MD5 = await this.GetMd5CodeAsync(item.VideoPath); // MD5
+                else
+                    item.Status = 0;
+
+                await this.UpdateOnlyVideoAsync(item); // 更新视频实体
+                Log.Information($"Process Video {item.Caption} MD5 Competed.");
+            }
+            catch (OperationCanceledException ex)
+            {
+                Log.Information($"Process Video {item.Caption} MD5 Canceled.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Process Video {item.Caption} MD5 Error. {ex}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asynchronously calculates the MD5 hash for a file.
+    /// </summary>
+    /// <param name="filePath">The path to the file for which the MD5 hash is to be calculated.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the MD5 hash of the file as a lowercase string.</returns>
+    /// <remarks>
+    /// This method reads the file content and computes the MD5 hash using the MD5 cryptographic service provider.
+    /// The computed hash is then converted to a string and returned.
+    /// </remarks>
+    private async Task<string> GetMd5CodeAsync(string filePath)
+    {
+        using (var md5 = System.Security.Cryptography.MD5.Create())
+        {
+            using (var stream = File.OpenRead(filePath))
+            {
+                var hash = await Task.Run(() => md5.ComputeHash(stream));
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
         }
     }
 
@@ -682,6 +908,7 @@ partial class MainViewModel
                 Growl.Info($"Save {video.Caption} success.");
         }
     }
+
     #endregion
 
     #region 清理

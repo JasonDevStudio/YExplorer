@@ -8,6 +8,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using HandyControl.Controls;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using Serilog;
 using XExplorer.DataAccess;
@@ -68,8 +69,9 @@ public partial class MainViewModel : ObservableObject
             this.isAllLoad = false;
             this.isLoadData = true;
             this.PicVisibility = Visibility.Collapsed;
-            this.VideoVisibility = Visibility.Visible; 
-            this.allVideos = await this.LoadDirAsync(this.SelectedDir);
+            this.VideoVisibility = Visibility.Visible;
+
+            this.allVideos = await this.LoadVideosAsync();
 
             if (this.allVideos?.Any() ?? false)
             {
@@ -86,7 +88,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.isLoadData = false;
-            this.IsBusy = false; 
+            this.IsBusy = false;
         }
     }
 
@@ -111,7 +113,7 @@ public partial class MainViewModel : ObservableObject
             this.isLoadData = true;
             this.isAllLoad = true;
             this.PicVisibility = Visibility.Collapsed;
-            this.VideoVisibility = Visibility.Visible; 
+            this.VideoVisibility = Visibility.Visible;
             this.allVideos = await this.LoadDirAsync(this.SelectedDir);
 
             if (this.allVideos?.Any() ?? false)
@@ -129,7 +131,7 @@ public partial class MainViewModel : ObservableObject
         finally
         {
             this.isLoadData = false;
-            this.IsBusy = false; 
+            this.IsBusy = false;
         }
     }
 
@@ -580,6 +582,85 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Asynchronously processes the MD5 hash for each video in the database.
+    /// </summary>
+    /// <remarks>
+    /// This method iterates over all videos in the database and calculates the MD5 hash for each video file.
+    /// The calculated MD5 hash is then stored in the corresponding video entity in the database.
+    /// </remarks> 
+    [RelayCommand]
+    public async Task ProcessVideoMd5Async()
+    {
+        try
+        {
+            this.IsBusy = true;
+            var tasks = new List<Task>();
+            var allVideos = await this.dataContext.Videos.Where(m => m.MD5 == null).ToListAsync();
+            var chunkCount = (allVideos.Count() / this.taskCount) + 1;
+            var chunkLinq = allVideos.Chunk(chunkCount);
+            Log.Information($"Process Video md5 count {allVideos.Count} ,task count{this.taskCount}, chunk count {chunkCount}.");
+            foreach (var chunk in chunkLinq)
+            {
+                // 为每个批次创建一个新的任务
+                var task = Task.Factory.StartNew(async obj =>
+                {
+                    if (obj is Video[] tmpVideos)
+                    {
+                        Log.Information($"Start Process Video md5 count {tmpVideos.Length} ,Thread Id {Thread.CurrentThread.ManagedThreadId}");
+
+                        // 这里放置处理每个批次的逻辑
+                        // 例如，遍历批次中的每个视频并执行操作
+                        foreach (var video in tmpVideos)
+                        {
+                            Log.Information($"Process Video {video.Caption} md5 code.");
+                            await this.ProcessVideoMd5Async(video);
+                            Log.Information($"Process Video {video.Caption} md5 code completed.[{video.MD5}]");
+                        }
+
+                        Log.Information($"End Process Video md5 count {tmpVideos.Length} ,Thread Id {Thread.CurrentThread.ManagedThreadId}");
+                    }
+                }, chunk);
+
+                tasks.Add(task);
+            }
+
+            // 等待所有任务完成
+            await Task.WhenAll(tasks);
+
+            Log.Information($"Process Video md5 count {allVideos.Count()} completed.");
+        }
+        catch (Exception e)
+        {
+            Growl.Error($"{e}");
+            Log.Error($"{e}");
+        }
+        finally
+        {
+            this.IsBusy = false;
+        }
+    }
+
+    [RelayCommand]
+    public async Task ProcessNotExistsVideosAsync()
+    {
+        try
+        {
+            this.IsBusy = true;
+            await this.CheckNotExistsVideosAsync();
+            Growl.Success("校验文件任务完成.");
+        }
+        catch (Exception e)
+        {
+            Growl.Error($"{e}");
+            Log.Error($"{e}");
+        }
+        finally
+        {
+            this.IsBusy = false;
+        }
+    }
+
     #endregion
 
     #region Details
@@ -595,7 +676,7 @@ public partial class MainViewModel : ObservableObject
         try
         {
             if (param is VideoEntry entry)
-            { 
+            {
                 await this.UpdateAsync(this.ToVideo(entry));
             }
         }
@@ -772,7 +853,7 @@ public partial class MainViewModel : ObservableObject
             if (param is VideoEntry enty)
             {
                 var video = this.allVideos.FirstOrDefault(m => m.Id == enty.Id);
-                await this.ProcessVideoAsync(video);
+                await this.ProcessVideoAsync(video, default);
             }
         }
         catch (Exception ex)
@@ -800,7 +881,7 @@ public partial class MainViewModel : ObservableObject
             Growl.Error($"{ex}");
         }
     }
-     
+
     #endregion
 
     #region Pics

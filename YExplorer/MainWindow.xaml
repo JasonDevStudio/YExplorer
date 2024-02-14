@@ -112,6 +112,7 @@
                         <hc:SplitButton.DropDownContent>
                             <StackPanel>
                                 <MenuItem Header="保存" ToolTip="保存数据"  Command="{Binding SaveDataCommand}"/> 
+                                <MenuItem Header="保存1" ToolTip="保存数据"  Command="{Binding SaveDataCommand}"/> 
                             </StackPanel>
                         </hc:SplitButton.DropDownContent>
                     </hc:SplitButton>
@@ -152,7 +153,7 @@
                             </StackPanel>
                         </hc:SplitButton.DropDownContent>
                     </hc:SplitButton>
-                    <hc:SplitButton Content="备份" 
+                    <hc:SplitButton Content="备份" Visibility="Collapsed"
                 ToolTip="备份数据"
                 Style="{StaticResource SplitButtonPrimary}"
                 Command="{Binding ZipDirectoryCommand}" 

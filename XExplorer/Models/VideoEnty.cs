@@ -14,7 +14,7 @@ public partial class VideoEntry : ObservableObject
 {
     public VideoEntry()
     {
-        this.SaveChanged = new AsyncRelayCommand<object>(SaveCmd);
+        this.SaveChanged = SaveCmd == null ? null : new AsyncRelayCommand<object>(SaveCmd);
     }
 
     [JsonIgnore] public IAsyncRelayCommand<object> SaveChanged { get; set; }
@@ -69,6 +69,16 @@ public partial class VideoEntry : ObservableObject
     /// 视频评价分数。
     /// </summary> 
     [ObservableProperty] private int evaluate;
+
+    /// <summary>
+    /// MD5
+    /// </summary>
+    [ObservableProperty] private string md5;
+
+    /// <summary>
+    /// Status
+    /// </summary>
+    [ObservableProperty] private decimal status = 1;
 
     /// <summary>
     /// 视频的快照列表。

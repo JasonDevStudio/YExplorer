@@ -65,6 +65,16 @@ public class Video : ModelBase
     public int Evaluate { get; set; } = 0;
 
     /// <summary>
+    /// MD5
+    /// </summary>
+    public string? MD5 { get; set; }
+    
+    /// <summary>
+    /// Status
+    /// </summary>
+    public decimal Status { get; set; } = 1;
+
+    /// <summary>
     /// 快照列表.
     /// </summary>
     public List<Snapshot> Snapshots { get; set; } = [];

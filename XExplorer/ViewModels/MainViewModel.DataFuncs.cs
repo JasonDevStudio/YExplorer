@@ -280,7 +280,7 @@ partial class MainViewModel
             query = query.Where(m => m.Caption.Contains(caption));
 
         if (evaluate.HasValue)
-            query = query.Where(m => m.Evaluate >= evaluate.Value); 
+            query = query.Where(m => m.Evaluate >= evaluate.Value);
 
         query = isDesc
             ? query.OrderByDescending(m => m.Evaluate).ThenByDescending(v => v.ModifyTime).ThenBy(m => m.Dir)
@@ -325,7 +325,9 @@ partial class MainViewModel
             PlayCount = video.PlayCount,
             ModifyTime = video.ModifyTime,
             Evaluate = video.Evaluate,
-            Snapshots = new ObservableCollection<Snapshot>(video.Snapshots)
+            Md5 = video.MD5,
+            //Status = video.Status,
+            Snapshots = (video.Snapshots?.Any() ?? false) ? new ObservableCollection<Snapshot>(video.Snapshots) : new(),
         };
 
         return videoViewModel;
@@ -367,6 +369,8 @@ partial class MainViewModel
             PlayCount = videoEntry.PlayCount,
             ModifyTime = videoEntry.ModifyTime,
             Evaluate = videoEntry.Evaluate,
+            MD5 = videoEntry.Md5,
+            Status = videoEntry.Status,
             Snapshots = videoEntry.Snapshots?.ToList()
         };
 
