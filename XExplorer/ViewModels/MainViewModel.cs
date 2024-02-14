@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using HandyControl.Controls;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Newtonsoft.Json;
 using Serilog;
 using XExplorer.DataAccess;
@@ -118,7 +119,8 @@ public partial class MainViewModel : ObservableObject
 
             if (this.allVideos?.Any() ?? false)
             {
-                this.LoadNextItem(this.allVideos.Count);
+                var enties = new ObservableCollection<VideoEntry>(this.allVideos.Select(m => this.ToVideoEntry(m)));
+                this.Videos = enties;
             }
 
             Growl.Success("全部加载完成");
