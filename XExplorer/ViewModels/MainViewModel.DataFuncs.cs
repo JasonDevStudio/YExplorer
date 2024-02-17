@@ -262,16 +262,18 @@ partial class MainViewModel
     /// <param name="evaluate">视频评价的最低分数，可为空。</param>
     /// <param name="isDesc">指定返回结果是否按修改时间降序排列，默认为true。</param>
     /// <param name="skip">跳过结果集中的前N个视频，默认为0。</param>
-    /// <param name="take">返回结果集中的视频数量，默认为10。</param>
+    /// <param name="take">返回结果集中的视频数量，默认为10。</param> 
     /// <returns>根据条件筛选的视频对象列表。</returns>
     /// <remarks>
     /// 此方法允许通过目录、标题关键字和评价分数进行筛选，并支持分页和排序。
     /// </remarks>
     private async Task<List<Video>> QueryAsync(string? dir = null, string? caption = null, int? evaluate = null,
-        bool isDesc = true, int skip = 0, int take = int.MaxValue)
+        bool isDesc = true, int skip = 0, int take = int.MaxValue,decimal status = 1)
     {
         var query = this.dataContext.Videos
             .Include(v => v.Snapshots).AsQueryable();
+
+        query = query.Where(m => m.Status == status);
 
         if (!string.IsNullOrWhiteSpace(dir))
             query = query.Where(m => m.VideoDir == dir);
@@ -318,7 +320,7 @@ partial class MainViewModel
         {
             Id = video.Id,
             Caption = video.Caption,
-            Dir = video.Dir,
+            Dir = Path.GetDirectoryName(video.VideoPath),
             VideoDir = video.VideoDir,
             VideoPath = video.VideoPath,
             Length = video.Length,
@@ -326,7 +328,7 @@ partial class MainViewModel
             ModifyTime = video.ModifyTime,
             Evaluate = video.Evaluate,
             Md5 = video.MD5,
-            //Status = video.Status,
+            Status = video.Status,
             Snapshots = (video.Snapshots?.Any() ?? false) ? new ObservableCollection<Snapshot>(video.Snapshots) : new(),
         };
 

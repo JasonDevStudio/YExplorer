@@ -97,6 +97,7 @@
                         <hc:SplitButton.DropDownContent>
                             <StackPanel>
                                 <MenuItem Header="加载" ToolTip="懒加载"  Command="{Binding LoadDirCommand}"/>
+                                <MenuItem Header="查重" ToolTip="加载出现重复的视频"  Command="{Binding LoadRepeatCommand}"/>
                                 <MenuItem Header="载图" ToolTip="加载图片"  Command="{Binding LoadPicCommand}"/>
                             </StackPanel>
                         </hc:SplitButton.DropDownContent>
@@ -240,7 +241,9 @@
                                             <Label Content="{Binding Length}"/>
                                             <Label Content="MB"/>
                                             <Label Content="==="/>
-                                            <Label Content="{Binding MidifyTime}"/>
+                                            <Label Content="{Binding ModifyTime}"/>
+                                            <Label Content="==="/>
+                                            <Label Content="{Binding Md5}"/>
                                         </StackPanel>
                                         <ListBox Grid.Row="2" Grid.ColumnSpan="6" 
                                              ItemsSource="{Binding Snapshots}" 

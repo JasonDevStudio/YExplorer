@@ -59,6 +59,49 @@ public partial class MainViewModel : ObservableObject
     /// 此方法首先清空当前的视频列表和临时视频列表，然后获取存储数据的目录路径，并加载该目录下的视频实体。如果加载的视频实体列表不为空，那么它将这些视频实体按照修改时间的降序排列并设置为当前的视频列表。然后，它取出前5个视频实体，设置为临时视频列表。
     /// </remarks>
     [RelayCommand]
+    public async Task LoadRepeatAsync()
+    {
+        try
+        {
+            this.IsBusy = true;
+            this.Videos.Clear();
+            this.allVideos.Clear();
+            this.loadCount = 1;
+            this.isAllLoad = false;
+            this.isLoadData = true;
+            this.PicVisibility = Visibility.Collapsed;
+            this.VideoVisibility = Visibility.Visible;
+
+            this.allVideos = await this.LoadRepeatVideosAsync();
+            //this.Videos = this.ToVideoEntities(this.allVideos);
+
+            if (this.allVideos?.Any() ?? false)
+                await this.LoadNextItemsAsync(firstLoadCount);
+
+            Growl.Success("加载完成");
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.isLoadData = false;
+            this.IsBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// 异步加载指定目录下的视频实体。
+    /// </summary>
+    /// <returns>
+    /// 表示异步操作的任务。
+    /// </returns>
+    /// <remarks>
+    /// 此方法首先清空当前的视频列表和临时视频列表，然后获取存储数据的目录路径，并加载该目录下的视频实体。如果加载的视频实体列表不为空，那么它将这些视频实体按照修改时间的降序排列并设置为当前的视频列表。然后，它取出前5个视频实体，设置为临时视频列表。
+    /// </remarks>
+    [RelayCommand]
     public async Task LoadDirAsync()
     {
         try
@@ -75,9 +118,7 @@ public partial class MainViewModel : ObservableObject
             this.allVideos = await this.LoadVideosAsync();
 
             if (this.allVideos?.Any() ?? false)
-            {
-                this.LoadNextItem(firstLoadCount);
-            }
+                await this.LoadNextItemsAsync(firstLoadCount);
 
             Growl.Success("加载完成");
         }
@@ -226,9 +267,9 @@ public partial class MainViewModel : ObservableObject
             this.Videos.Clear();
 
             if (this.isAllLoad)
-                this.LoadNextItem(this.allVideos.Count);
+                await this.LoadNextItemsAsync(this.allVideos.Count);
             else
-                this.LoadNextItem(firstLoadCount);
+                await this.LoadNextItemsAsync(firstLoadCount);
 
             Growl.Success("排序完成");
         }
@@ -262,7 +303,7 @@ public partial class MainViewModel : ObservableObject
         {
             this.IsBusy = true;
             VideoEntry.SaveCmd = null;
-            LoadNextItem(this.loadCount);
+            await this.LoadNextItemsAsync(this.loadCount);
         }
         catch (Exception ex)
         {
@@ -371,7 +412,7 @@ public partial class MainViewModel : ObservableObject
 
             await this.ProcessVideosAsync(files, this.TaskCount);
 
-            this.LoadNextItem(this.loadCount);
+            await this.LoadNextItemsAsync(this.loadCount);
 
             Log.Information($"Process videos End。");
             Growl.Success($"Process videos End。");
@@ -798,11 +839,27 @@ public partial class MainViewModel : ObservableObject
         {
             if (param is VideoEntry entry)
             {
+                var _dir_99 = new DirectoryInfo(@"\\192.168.10.2\99_资源收藏\01_成人资源");
+                var _dir_98 = new DirectoryInfo(@"\\192.168.10.2\98_资源收藏\01_成人资源");
+                var dirs = new List<DirectoryInfo>();
+                dirs.AddRange(_dir_99.GetDirectories());
+                dirs.AddRange(_dir_98.GetDirectories());
+
+
                 var dirName = Path.GetDirectoryName(entry.VideoPath);
 
-                if (this.SelectedDir == dirName)
+                if (dirs.Any(m => m.FullName == dirName) || dirs.Any(m => m.Name == new DirectoryInfo(dirName).Name))
                 {
-                    Growl.Warning($"根目录不允许直接删除文件夹");
+                    Growl.Warning($"The root directory does not allow direct deletion of folders!");
+                    return;
+                }
+
+                var tmpVideos = await this.QueryAsync();
+                var hasAny = tmpVideos?.Count(m => Path.GetDirectoryName(m.VideoPath) == dirName) > 1;
+
+                if (hasAny)
+                {
+                    Growl.Warning($"Multiple videos exist in this directory and are not allowed to be deleted!");
                     return;
                 }
 

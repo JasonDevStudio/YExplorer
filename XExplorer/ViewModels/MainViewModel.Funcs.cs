@@ -160,6 +160,50 @@ partial class MainViewModel
         return this.allVideos;
     }
 
+
+    private async Task<List<Video>> LoadRepeatVideosAsync()
+    {
+        Log.Information($"Start load videos ...");
+
+        try
+        {
+            var times = new StringBuilder();
+
+            await Task.Run(async () =>
+            {
+                var stopWacth = Stopwatch.StartNew();
+                var tmpVideos = await this.QueryAsync();
+
+                stopWacth.Stop();
+                times.AppendLine($"Query times [{stopWacth.Elapsed.TotalSeconds}] s");
+                stopWacth.Restart();
+
+                var groups = tmpVideos.GroupBy(m => m.MD5).Where(g => g.Count() > 1);
+
+                foreach (var group in groups)
+                    this.allVideos.AddRange(group.ToList());
+
+                stopWacth.Stop();
+                times.AppendLine($"Group times [{stopWacth.Elapsed.TotalSeconds}] s");
+            });
+
+            times.AppendLine($"Query Data count {this.allVideos.Count} .");
+
+            Growl.Info(times.ToString());
+        }
+        catch (Exception ex)
+        {
+            Log.Information($"Error: {ex}");
+            Growl.Error($"{ex}");
+        }
+        finally
+        {
+            Log.Information($"End Load ...");
+        }
+
+        return this.allVideos;
+    }
+
     /// <summary>
     /// 异步加载指定目录下的视频实体列表。
     /// </summary>
@@ -190,23 +234,6 @@ partial class MainViewModel
                 times.AppendLine($"Query times [{stopWacth.Elapsed.TotalSeconds}] s");
                 stopWacth.Restart();
 
-                ////if (videoEntities?.Any() ?? false)
-                ////{
-                ////    videoEntities.AsParallel().ForAll(async video =>
-                ////    {
-                ////        if (video.Snapshots?.Any() ?? false)
-                ////        {
-                ////            var notExistsCount =
-                ////                video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
-                ////            if (notExistsCount < video.Snapshots.Count / 2)
-                ////                lock (this.allVideos)
-                ////                    this.allVideos?.Add(video);
-                ////            else
-                ////                filterdCount++;
-                ////        }
-                ////    });
-                ////}
-
                 this.allVideos = this.allVideos.OrderByDescending(m => m.Evaluate).ThenByDescending(m => m.ModifyTime)
                     .ThenBy(m => m.Dir).ToList();
 
@@ -216,7 +243,7 @@ partial class MainViewModel
 
             times.AppendLine($"Query Data count {this.allVideos.Count} .");
             times.AppendLine($"Filterd Data count {filterdCount} .");
-             
+
             Growl.Info(times.ToString());
 
             if (filterdCount > 0)
@@ -281,7 +308,7 @@ partial class MainViewModel
 
             if (entries?.Any() ?? false)
             {
-                entries.AsParallel().ForAll(async video =>
+                foreach (var video in entries)
                 {
                     if (video.Snapshots?.Any() ?? false)
                     {
@@ -292,13 +319,62 @@ partial class MainViewModel
                             lock (tmpEntiries)
                                 tmpEntiries?.Add(video);
                     }
-                });
+                }
             }
 
             if (tmpEntiries?.Any() ?? false)
             {
                 if (Application.Current.Dispatcher.CheckAccess())
-                { 
+                {
+                    foreach (var video in tmpEntiries)
+                        this.Videos.Add(this.ToVideoEntry(video));
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 从全量数据集合中加载下N项。
+    /// </summary>
+    /// <param name="count">需要加载的数量</param>
+    private async Task LoadNextItemsAsync(int count = 1)
+    {
+        if (!(this.allVideos?.Any() ?? false))
+            return;
+
+        if (count == -1)
+        {
+            count = this.allVideos.Count;
+            this.Videos = this.ToVideoEntities(this.allVideos);
+        }
+        else
+        {
+            var tmpEntiries = new List<Video>();
+
+            await Task.Run(() =>
+            {
+                var entries = this.allVideos.Skip(this.Videos.Count).Take(count);
+
+                if (entries?.Any() ?? false)
+                {
+                    foreach (var video in entries)
+                    {
+                        if (video.Snapshots?.Any() ?? false)
+                        {
+                            var notExistsCount =
+                                video.Snapshots.Count(m => !File.Exists(m.Path) || IsImageBlack(m.Path));
+
+                            if (notExistsCount < video.Snapshots.Count / 2)
+                                tmpEntiries?.Add(video);
+                        }
+                    }
+                }
+            });
+
+            if (tmpEntiries?.Any() ?? false)
+            {
+                if (Application.Current.Dispatcher.CheckAccess())
+                {
                     foreach (var video in tmpEntiries)
                         this.Videos.Add(this.ToVideoEntry(video));
                 }
