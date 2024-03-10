@@ -513,7 +513,7 @@ partial class MainViewModel
     /// <returns>表示异步操作的任务。</returns>
     public async Task TryProcessVideoAsync(Video item)
     {
-        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(3)))
         {
             try
             {
@@ -594,7 +594,6 @@ partial class MainViewModel
             enty.VideoDir = this.SelectedDir;
             enty.Dir = Path.GetDirectoryName(enty.VideoPath).Replace(this.SelectedDir, string.Empty).Trim('\\');
             enty.DataDir = datapath;
-            enty.MD5 = await this.GetMd5CodeAsync(enty.VideoPath); // MD5
 
             foreach (var time in times)
             {
@@ -620,7 +619,7 @@ partial class MainViewModel
             enty.Snapshots = images; // 截图文件 
 
             Log.Information($"Video {enty.Caption} delete images completed.");
-
+            //enty.MD5 = await this.GetMd5CodeAsync(enty.VideoPath); // MD5
             cancellationToken.ThrowIfCancellationRequested();
 
             if (isNew)
@@ -677,7 +676,7 @@ partial class MainViewModel
 
     private async Task ProcessVideoMd5Async(Video item)
     {
-        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(1)))
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
         {
             try
             {
