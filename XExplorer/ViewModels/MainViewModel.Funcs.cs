@@ -386,6 +386,31 @@ partial class MainViewModel
 
     #region Process
 
+    private void OpenVideo(Video enty)
+    { 
+        using var libVLC = new LibVLC();
+        using var mediaPlayer = new LibVLCSharp.Shared.MediaPlayer(libVLC); 
+
+        try
+        {
+            var item = new FileInfo(enty.VideoPath); // 视频文件    
+            var media = new Media(libVLC, item.FullName, FromType.FromPath); // 视频文件
+            mediaPlayer.Media = media; // 设置视频文件 
+            mediaPlayer.Play();
+            mediaPlayer.ToggleMute(); // 静音 
+            mediaPlayer.Mute = true;
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Error: {enty.VideoPath}{Environment.NewLine}{ex}");
+        }
+        finally
+        {
+            mediaPlayer.Stop();
+            mediaPlayer.Dispose();
+        }
+    }
+    
     /// <summary>
     /// 异步处理指定目录及其所有子目录下的视频文件。
     /// </summary>

@@ -642,7 +642,8 @@ public partial class MainViewModel : ObservableObject
             var allVideos = await this.dataContext.Videos.Where(m => m.MD5 == null).ToListAsync();
             var chunkCount = (allVideos.Count() / this.taskCount) + 1;
             var chunkLinq = allVideos.Chunk(chunkCount);
-            Log.Information($"Process Video md5 count {allVideos.Count} ,task count{this.taskCount}, chunk count {chunkCount}.");
+            Log.Information(
+                $"Process Video md5 count {allVideos.Count} ,task count{this.taskCount}, chunk count {chunkCount}.");
             foreach (var chunk in chunkLinq)
             {
                 // 为每个批次创建一个新的任务
@@ -650,7 +651,8 @@ public partial class MainViewModel : ObservableObject
                 {
                     if (obj is Video[] tmpVideos)
                     {
-                        Log.Information($"Start Process Video md5 count {tmpVideos.Length} ,Thread Id {Thread.CurrentThread.ManagedThreadId}");
+                        Log.Information(
+                            $"Start Process Video md5 count {tmpVideos.Length} ,Thread Id {Thread.CurrentThread.ManagedThreadId}");
 
                         // 这里放置处理每个批次的逻辑
                         // 例如，遍历批次中的每个视频并执行操作
@@ -661,7 +663,8 @@ public partial class MainViewModel : ObservableObject
                             Log.Information($"Process Video {video.Caption} md5 code completed.[{video.MD5}]");
                         }
 
-                        Log.Information($"End Process Video md5 count {tmpVideos.Length} ,Thread Id {Thread.CurrentThread.ManagedThreadId}");
+                        Log.Information(
+                            $"End Process Video md5 count {tmpVideos.Length} ,Thread Id {Thread.CurrentThread.ManagedThreadId}");
                     }
                 }, chunk);
 
@@ -742,13 +745,11 @@ public partial class MainViewModel : ObservableObject
         try
         {
             string path = param as string;
-            if (!string.IsNullOrWhiteSpace(path))
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
             {
-                Process.Start(this.playerPath, path);
-
+                Process.Start(this.playerPath, $"--no-one-instance \"{path}\"");
                 var entry = this.Videos.FirstOrDefault(m => m.VideoPath == path);
                 entry.PlayCount++;
-
                 await this.UpdateAsync(this.ToVideo(entry));
             }
         }
@@ -823,6 +824,42 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// 删除一个视频实体及其对应的视频文件。
+    /// </summary>
+    /// <param name="param">表示视频实体的对象。</param>
+    /// <remarks>
+    /// 此方法首先检查传入的参数是否为`VideoEntry`类型，如果是，那么它就会删除视频文件，然后从视频列表中移除该视频实体，并保存更改。
+    /// </remarks>
+    [RelayCommand]
+    public async Task DeleteOnlyAsync(object param)
+    {
+        try
+        {
+            this.IsBusy = false;
+            if (param is VideoEntry entry)
+            {
+                await Task.Run(async () =>
+                { 
+                    var video = this.allVideos.FirstOrDefault(m => m.Id == entry.Id);
+                    this.allVideos.Remove(video);
+                    await this.DeleteVideosAsync(new List<Video>() { video });
+                });
+
+                this.Videos.Remove(entry);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
+            Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = false;
+        }
+    }
+    
     /// <summary>
     /// 删除视频实体对应的文件夹及其内容。
     /// </summary>

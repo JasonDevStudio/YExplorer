@@ -284,6 +284,9 @@
                                             <Button Content="Del" Style="{StaticResource MyButton}"
                                     Command="{Binding Path=DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
+                                            <Button Content="DelOnly" Style="{StaticResource MyButton}"
+                                                    Command="{Binding Path=DataContext.DeleteOnlyCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
+                                                    CommandParameter="{Binding }" />
                                             <Button Content="Del folder" Style="{StaticResource MyButton}"
                                     Command="{Binding Path=DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType={x:Type ItemsControl}}}"
                                     CommandParameter="{Binding }" />
