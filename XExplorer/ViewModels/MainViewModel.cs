@@ -800,7 +800,7 @@ public partial class MainViewModel : ObservableObject
             this.IsBusy = false;
             if (param is VideoEntry entry)
             {
-                await Task.Run(async () =>
+                Task.Run(async () =>
                 {
                     if (File.Exists(entry.VideoPath))
                         File.Delete(entry.VideoPath);
@@ -808,9 +808,8 @@ public partial class MainViewModel : ObservableObject
                     var video = this.allVideos.FirstOrDefault(m => m.Id == entry.Id);
                     this.allVideos.Remove(video);
                     await this.DeleteVideosAsync(new List<Video>() { video });
+                    Application.Current.Dispatcher.InvokeAsync(() => this.Videos.Remove(entry));
                 });
-
-                this.Videos.Remove(entry);
             }
         }
         catch (Exception ex)
@@ -840,7 +839,7 @@ public partial class MainViewModel : ObservableObject
             if (param is VideoEntry entry)
             {
                 await Task.Run(async () =>
-                { 
+                {
                     var video = this.allVideos.FirstOrDefault(m => m.Id == entry.Id);
                     this.allVideos.Remove(video);
                     await this.DeleteVideosAsync(new List<Video>() { video });
@@ -859,7 +858,7 @@ public partial class MainViewModel : ObservableObject
             this.IsBusy = false;
         }
     }
-    
+
     /// <summary>
     /// 删除视频实体对应的文件夹及其内容。
     /// </summary>
@@ -874,6 +873,7 @@ public partial class MainViewModel : ObservableObject
     {
         try
         {
+            this.IsBusy = false;
             if (param is VideoEntry entry)
             {
                 var _dir_99 = new DirectoryInfo(@"\\192.168.10.2\99_资源收藏\01_成人资源");
@@ -887,7 +887,15 @@ public partial class MainViewModel : ObservableObject
 
                 if (dirs.Any(m => m.FullName == dirName) || dirs.Any(m => m.Name == new DirectoryInfo(dirName).Name))
                 {
-                    Growl.Warning($"The root directory does not allow direct deletion of folders!");
+                    Growl.Warning($"根目录不能直接删除!");
+
+                    var question = HandyControl.Controls.MessageBox.Show(
+                        $"是否删除文件 {entry.VideoPath}?", caption: "Question",
+                        MessageBoxButton.OKCancel);
+
+                    if (question == MessageBoxResult.OK)
+                        this.DeleteAsync(param);
+                    
                     return;
                 }
 
@@ -896,38 +904,51 @@ public partial class MainViewModel : ObservableObject
 
                 if (hasAny)
                 {
-                    Growl.Warning($"Multiple videos exist in this directory and are not allowed to be deleted!");
+                    Growl.Warning($"文件夹中存在多个视频数据, 不支持直接删除!");
+                    var question = HandyControl.Controls.MessageBox.Show(
+                        $"是否删除文件 {entry.VideoPath}?", caption: "Question",
+                        MessageBoxButton.OKCancel);
+
+                    if (question == MessageBoxResult.OK)
+                         this.DeleteAsync(param);
                     return;
                 }
 
                 var result = HandyControl.Controls.MessageBox.Show(
-                    $"Are you sure you want to delete the folder {entry.VideoPath}?", caption: "Question",
+                    $"是否删除文件夹 {entry.VideoPath} ?", caption: "Question",
                     MessageBoxButton.OKCancel);
 
                 if (result == MessageBoxResult.Cancel)
                     return;
 
-                var delVideos = this.allVideos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
-                foreach (var item in delVideos)
+                Task.Run(async () =>
                 {
-                    if (File.Exists(item.VideoPath))
-                        File.Delete(item.VideoPath);
+                    var delVideos = this.allVideos.Where(m => m.VideoPath.StartsWith(dirName)).ToList();
+                    foreach (var item in delVideos)
+                    {
+                        if (File.Exists(item.VideoPath))
+                            File.Delete(item.VideoPath);
 
-                    var entryItem = this.Videos.FirstOrDefault(m => m.Id == item.Id);
-                    this.Videos.Remove(entryItem);
-                    this.allVideos.Remove(item);
-                }
+                        var entryItem = this.Videos.FirstOrDefault(m => m.Id == item.Id);
+                        this.allVideos.Remove(item);
+                        Application.Current.Dispatcher.InvokeAsync(() => this.Videos.Remove(entryItem));
+                    }
 
-                if (Directory.Exists(dirName))
-                    Directory.Delete(dirName, true);
+                    if (Directory.Exists(dirName))
+                        Directory.Delete(dirName, true);
 
-                await this.DeleteVideosAsync(delVideos);
+                    await this.DeleteVideosAsync(delVideos);
+                });
             }
         }
         catch (Exception ex)
         {
             Log.Error(ex, $"{MethodBase.GetCurrentMethod().Name} Is Error");
             Growl.Error($"{ex}");
+        }
+        finally
+        {
+            this.IsBusy = false;
         }
     }
 
