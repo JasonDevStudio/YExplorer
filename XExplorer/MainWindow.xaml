@@ -259,6 +259,9 @@
                                             <ListBox.ItemTemplate>
                                                 <DataTemplate>
                                                     <Image Source="{Binding Path}" Style="{StaticResource MyImage}" >
+                                                        <Image.CacheMode>
+                                                            <BitmapCache RenderAtScale="1" SnapsToDevicePixels="True"/>
+                                                        </Image.CacheMode>
                                                         <Image.ToolTip>
                                                             <ToolTip>
                                                                 <StackPanel>
@@ -313,6 +316,9 @@
                         <hc:CoverView.ItemHeaderTemplate>
                             <DataTemplate>
                                 <Image Source="{Binding }" Stretch="Uniform">
+                                    <Image.CacheMode>
+                                        <BitmapCache RenderAtScale="0.5" SnapsToDevicePixels="True" />
+                                    </Image.CacheMode>
                                     <Image.ToolTip>
                                         <ToolTip>
                                             <StackPanel>

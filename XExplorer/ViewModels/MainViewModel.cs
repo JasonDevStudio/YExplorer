@@ -1016,8 +1016,8 @@ public partial class MainViewModel : ObservableObject
             this.PicVisibility = Visibility.Visible;
             this.VideoVisibility = Visibility.Collapsed;
             this.allImages.Clear();
-            var pics = await this.LoadPics(this.SelectedDir);
-            this.Images = new ObservableCollection<string>(pics);
+            var pics = await this.LoadPics(this.SelectedDir, 100);
+            this.Images = new ObservableCollection<string>(pics); 
         }
         catch (Exception ex)
         {
