@@ -33,10 +33,8 @@ public partial class MainViewModel : ObservableObject
     public MainViewModel()
     {
         var _dir_99 = new DirectoryInfo(@"\\192.168.10.2\99_资源收藏\01_成人资源");
-        var _dir_98 = new DirectoryInfo(@"\\192.168.10.2\98_资源收藏\01_成人资源");
         var dirs_99 = _dir_99.GetDirectories();
-        var dirs_98 = _dir_98.GetDirectories();
-        var allDirs = dirs_99.Concat(dirs_98).OrderByDescending(m => m.CreationTime).Select(m => m.FullName);
+        var allDirs = dirs_99.OrderByDescending(m => m.CreationTime).Select(m => m.FullName);
         this.DirPaths = new ObservableCollection<string>(allDirs);
         this.dataPath = AppSettingsUtils.Default.WinDataPath;
         this.playerPath = AppSettingsUtils.Default.WinPlayerPath;
@@ -416,6 +414,8 @@ public partial class MainViewModel : ObservableObject
 
             Log.Information($"Process videos End。");
             Growl.Success($"Process videos End。");
+
+            await this.LoadAllDirsAsync();
         }
         catch (Exception ex)
         {
@@ -877,10 +877,8 @@ public partial class MainViewModel : ObservableObject
             if (param is VideoEntry entry)
             {
                 var _dir_99 = new DirectoryInfo(@"\\192.168.10.2\99_资源收藏\01_成人资源");
-                var _dir_98 = new DirectoryInfo(@"\\192.168.10.2\98_资源收藏\01_成人资源");
                 var dirs = new List<DirectoryInfo>();
                 dirs.AddRange(_dir_99.GetDirectories());
-                dirs.AddRange(_dir_98.GetDirectories());
 
 
                 var dirName = Path.GetDirectoryName(entry.VideoPath);
