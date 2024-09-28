@@ -75,6 +75,16 @@ partial class MainViewModel
     #region Fields
 
     /// <summary>
+    /// 用户的密码字段。
+    /// </summary>
+    /// <remarks>
+    /// 这个字段存储了用户的密码，并且通过数据绑定机制将其绑定到视图的密码输入框中。
+    /// 通过 <see cref="CommunityToolkit.Mvvm.ComponentModel.ObservableProperty"/> 特性支持通知视图更新。
+    /// </remarks>
+    [ObservableProperty]
+    private string password;
+    
+    /// <summary>
     /// 任务数量
     /// </summary>
     [ObservableProperty]

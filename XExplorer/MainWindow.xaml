@@ -112,7 +112,8 @@
                                     HorizontalAlignment="Stretch">
                         <hc:SplitButton.DropDownContent>
                             <StackPanel>
-                                <MenuItem Header="保存" ToolTip="保存数据"  Command="{Binding SaveDataCommand}"/>
+                                <MenuItem Header="解压" ToolTip="压缩包解压"  Command="{Binding ExtractCommand}"/>
+                                <MenuItem Header="密码" ToolTip="添加压缩包解压密码"  Command="{Binding AddPwdCommand}"/> 
                                 <MenuItem Header="渲染" ToolTip="离屏渲染保存图片"  Command="{Binding SaveToImageCommand}"/>
                                 <MenuItem Header="MD5" ToolTip="更新所有视频文件的MD5"  Command="{Binding ProcessVideoMd5Command}"/>
                                 <MenuItem Header="校验" ToolTip="校验视频文件是否存在"  Command="{Binding ProcessNotExistsVideosCommand}"/>

@@ -36,6 +36,11 @@ public class SQLiteContext : DbContext
     /// </summary>
     public DbSet<Snapshot> Snapshots { get; set; }
 
+    /// <summary>
+    /// 获取或设置存储在数据库中的密码集合。
+    /// </summary>
+    public DbSet<Passwords> Passwords { get; set; }
+    
     #endregion
 
     /// <summary>
